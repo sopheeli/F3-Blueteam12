@@ -1,4 +1,6 @@
 ####Simulation HW1########
+####   Sophee     ########
+#### 11/5/2018    ########
 
 library(ks)
 library(dplyr)
