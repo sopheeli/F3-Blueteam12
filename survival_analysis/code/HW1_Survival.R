@@ -46,7 +46,7 @@ kphaz.plot(katrina_haz, main = "hazard function")
 
 # cumulative hazard
 katrina_fit <- survfit(Surv(hour, survive == 0) ~ reason, data = subset(katrina, reason!=0))
-ggsurvplot(katrina_fit, fun = "cumhaz", color= 'reason') + ggtitle("Cumulative Hazard", "By Cause of Failure") + scale_color_manual(labels=c("Flood", "Motor", "Surged", "Jammed"))
+ggsurvplot(katrina_fit, fun = "cumhaz", color= 'reason') + ggtitle("Cumulative Hazard", "By Cause of Failure") #+ scale_color_manual(labels=c("Flood", "Motor", "Surged", "Jammed"))
   
 
 
