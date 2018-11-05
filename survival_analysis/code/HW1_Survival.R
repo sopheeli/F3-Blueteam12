@@ -44,38 +44,35 @@ katrina$hour2 <- ifelse(katrina$hour == 48 & katrina$survive == 1, 49, katrina$h
 
 # turn survive values opposite
 katrina$survive2 <- ifelse(katrina$survive == 0, 1, 0)
+
+katrina_haz <- with(katrina, kphaz.fit(hour2, survive2))
+
 katrina_haz1 <- with(subset(katrina, reason==1), kphaz.fit(hour2, survive2))
 katrina_haz2 <- with(subset(katrina, reason==2), kphaz.fit(hour2, survive2))
 katrina_haz3 <- with(subset(katrina, reason==3), kphaz.fit(hour2, survive2))
 katrina_haz4 <- with(subset(katrina, reason==4), kphaz.fit(hour2, survive2))
 
+# make all the vectors have the same length
+haz1 <- c(katrina_haz1$haz, rep(0, n - length(katrina_haz1$haz)))
+haz2 <- c(katrina_haz2$haz, rep(0, n - length(katrina_haz2$haz)))
+haz3 <- c(katrina_haz3$haz, rep(0, n - length(katrina_haz3$haz)))
+haz4 <- c(katrina_haz4$haz, rep(0, n - length(katrina_haz4$haz)))
 
-kat <- data.frame(hazard=katrina_haz1$haz, reason="1")
-kat2 <-  data.frame(hazard=katrina_haz2$haz, reason="2")
-kat3 <- data.frame(hazard=katrina_haz3$haz, reason="3")
-kat4 <-  data.frame(hazard=katrina_haz4$haz, reason="4")
+# create data frames for each reason's hazard
+kat1 <- data.frame(hazard=haz1, reason="1")
+kat2 <-  data.frame(hazard=haz2, reason="2")
+kat3 <- data.frame(hazard=haz3, reason="3")
+kat4 <-  data.frame(hazard=haz4, reason="4")
 
-all_kat <- as.data.frame(rbind(kat, kat2,kat3, kat4))
+# combine them together
+all_kat <- as.data.frame(rbind(kat1, kat2, kat3, kat4))
 
-
-ggplot(data=all_kat) + ggline(all_kat, x=seq(0, 48), y=hazard)
-
-
-
-katrina_haz1$haz
-
-
-
-
-
-
-kphaz.plot(katrina_haz, main = "hazard function")
+# plot the multiple hazard
+ggplot(all_kat, aes(x = c(seq(1:47), seq(1:47), seq(1:47), seq(1:47)), y = hazard, group = reason, colour = reason)) +
+  geom_line()
 
 
-
-?kphaz.fit
-
-# cumulative hazard
+# cumulative hazard ----------------------------------------------------
 katrina_fit <- survfit(Surv(hour, survive == 0) ~ reason, data = subset(katrina, reason!=0))
 ggsurvplot(katrina_fit, fun = "cumhaz", color= 'reason') +
   ggtitle("Cumulative Hazard", "By Cause of Failure") 
