@@ -2,9 +2,11 @@ library(survival)
 library(survminer)
 library(muhaz)
 library(dplyr)
-katrina <- read.csv("C:/Users/Jerry/Documents/MSA18/Survival_Analysis/Data/katrina.csv", header = T, stringsAsFactors = F)
 
-katrina[, c(9:56)] <- NULL
+katrina <- read.csv("C:/Users/Christopher/Documents/IAA/Fall 3/F3-Blueteam12/survival_analysis/data/katrina.csv", header = T, stringsAsFactors = F)
+
+katrina[, c(9:56)] <- NULL # Removes unnecessary columns
+
 # Total number of pumps in the dataset
 num_pumps = nrow(katrina)
 
@@ -16,9 +18,12 @@ katrina %>%
 
 # plot the survival function
 # survive == 0 is the event
-katrina_surv <- survfit(Surv(time = hour, event = survive == 0) ~ reason, data = katrina)
+katrina_surv <- survfit(Surv(time = hour, event = survive == 0) ~ reason, data = subset(katrina, reason!=0))
 summary(katrina_surv)
-ggsurvplot(katrina_surv)
+ggsurvplot(katrina_surv, conf.int = TRUE) +
+  ggtitle("Pump Station Survival Rates", "By Cause of Failure") +
+  xlab("Hour")
+  
 
 # do the log-rank test
 survdiff(Surv(time = hour, event = survive == 0) ~ reason, rho = 0, data = katrina[katrina$reason!=0, ])
@@ -28,15 +33,20 @@ survdiff(Surv(time = hour, event = survive == 0) ~ reason, rho = 1, data = katri
 survminer::pairwise_survdiff(Surv(time = hour, event = survive == 0) ~ reason, rho = 0, data = katrina[katrina$reason!=0, ])
 survminer::pairwise_survdiff(Surv(time = hour, event = survive == 0) ~ reason, rho = 1, data = katrina[katrina$reason!=0, ])
 
+
+# Hazard  Function --------------------------------------------------------
+
 # plot the hazard function
 katrina$hour2 <- ifelse(katrina$hour == 48 & katrina$survive == 1, 49, katrina$hour)
+
 # turn survive values opposite
 katrina$survive2 <- ifelse(katrina$survive == 0, 1, 0)
 katrina_haz <- with(katrina, kphaz.fit(hour2, survive2))
 kphaz.plot(katrina_haz, main = "hazard function")
 
 # cumulative hazard
-katrina_fit <- survfit(Surv(hour, survive == 1) ~ 1, data = katrina)
-ggsurvplot(katrina_fit, fun = "cumhaz", palette = "grey")
+katrina_fit <- survfit(Surv(hour, survive == 0) ~ reason, data = subset(katrina, reason!=0))
+ggsurvplot(katrina_fit, fun = "cumhaz", color= 'reason') + ggtitle("Cumulative Hazard", "By Cause of Failure") + scale_color_manual(labels=c("Flood", "Motor", "Surged", "Jammed"))
+  
 
 
