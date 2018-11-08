@@ -45,13 +45,16 @@ katrina$hour2 <- ifelse(katrina$hour == 48 & katrina$survive == 1, 49, katrina$h
 # turn survive values opposite
 katrina$survive2 <- ifelse(katrina$survive == 0, 1, 0)
 
-katrina_haz <- with(katrina, kphaz.fit(hour2, survive2))
+katrina_haz <- with(subset(katrina, reason==4), kphaz.fit(hour2, survive2))
+kphaz.plot(katrina_haz, main = "hazard function", las = 1, bty = "n")
+
 
 katrina_haz1 <- with(subset(katrina, reason==1), kphaz.fit(hour2, survive2))
 katrina_haz2 <- with(subset(katrina, reason==2), kphaz.fit(hour2, survive2))
 katrina_haz3 <- with(subset(katrina, reason==3), kphaz.fit(hour2, survive2))
 katrina_haz4 <- with(subset(katrina, reason==4), kphaz.fit(hour2, survive2))
 
+n=47
 # make all the vectors have the same length
 haz1 <- c(katrina_haz1$haz, rep(0, n - length(katrina_haz1$haz)))
 haz2 <- c(katrina_haz2$haz, rep(0, n - length(katrina_haz2$haz)))
@@ -68,15 +71,35 @@ kat4 <-  data.frame(hazard=haz4, reason="4")
 all_kat <- as.data.frame(rbind(kat1, kat2, kat3, kat4))
 
 # plot the multiple hazard
-ggplot(all_kat, aes(x = c(seq(1:47), seq(1:47), seq(1:47), seq(1:47)), y = hazard, group = reason, colour = reason)) +
-  geom_line()
+ggplot(all_kat, aes(x = c(seq(1:47), seq(1:47), seq(1:47), seq(1:47)), y = hazard, colour = reason)) +
+  geom_line() + xlab ("Hour") +
+  ylab("Hazard") +
+  ggtitle("Hazard Function", "By Failure Reason") +
+  scale_color_manual(labels=c("Flooded", "Motor", "Surged", "Jammed"), values=c("red", "blue", "green", "purple")) +
+  theme_classic()
+
+
 
 
 # cumulative hazard ----------------------------------------------------
 katrina_fit <- survfit(Surv(hour, survive == 0) ~ reason, data = subset(katrina, reason!=0))
-ggsurvplot(katrina_fit, fun = "cumhaz", color= 'reason') +
+ggsurvplot(katrina_fit, fun = "cumhaz", color='reason', legend.title='Failure Reason',
+           legend.labs=c("Flooded", "Motor", "Surged", "Jammed"),
+           xlim=c(0,48)) +
   ggtitle("Cumulative Hazard", "By Cause of Failure") 
   #+ scale_color_manual(labels=c("Flood", "Motor", "Surged", "Jammed"))
-  
+
+katrina_fit <- survfit(Surv(hour, survive == 0) ~ reason, data = subset(katrina, reason==2))
+ggsurvplot(katrina_fit, fun = "cumhaz") +
+  ggtitle("Cumulative Hazard", "By Cause of Failure") 
+#+ scale_color_manual(labels=c("Flood", "Motor", "Surged", "Jammed"))
+
+katrina_fit <- survfit(Surv(hour, survive == 0) ~ reason, data = subset(katrina, reason==3))
+ggsurvplot(katrina_fit, fun = "cumhaz") +
+  ggtitle("Cumulative Hazard", "By Cause of Failure") 
+
+katrina_fit <- survfit(Surv(hour, survive == 0) ~ reason, data = subset(katrina, reason==4))
+ggsurvplot(katrina_fit, fun = "cumhaz") +
+  ggtitle("Cumulative Hazard", "By Cause of Failure") 
 
 
