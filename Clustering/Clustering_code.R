@@ -19,7 +19,7 @@ load("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/boston_1.rdata")
 
 register_google("AIzaSyBdQvxweoFWqcM6oHjuRTEPtCLguSXRiT0")
 
-map <- get_map(location = "Boston",zoom=12)
+map <- get_map(location = "Boston",zoom=13)
 
 ggmap(map)
 #save(map,file = "boston_2.RData")   
@@ -136,7 +136,7 @@ plot(clusters.s)
 plot(clusters.a)
 
 #assumption made here, assume use complete method with 5 clusters
-combined$clus <- cutree(clusters.c,7)
+combined$clus <- cutree(clusters.c,5)
 
 #tells the summary of each cluster
 combined %>%
@@ -146,6 +146,7 @@ combined %>%
             avg_price_bed = mean(price_per_bed),
             avg_location = mean(review_scores_location),
             avt_review = mean(review_scores_rating),
+            avg_beds = mean(beds),
             num = n())
 
 clu1 <- combined %>% filter(clus == 1)
@@ -158,9 +159,9 @@ clu4 <- combined %>% filter(clus == 4)
 
 clu5 <- combined %>% filter(clus == 5)
 
-clu6 <- combined %>% filter(clus == 6)
+#clu6 <- combined %>% filter(clus == 6)
 
-clu7 <- combined %>% filter(clus == 7)
+#clu7 <- combined %>% filter(clus == 7)
 
 ggmap(map, fullpage = TRUE) + geom_point(data = clu1, aes(x = longitude, y = latitude), color = 'yellow', size = 2) + 
   geom_point(data = clu2, aes(x = longitude, y = latitude), color = 'red', size = 2) + 
@@ -169,7 +170,9 @@ ggmap(map, fullpage = TRUE) + geom_point(data = clu1, aes(x = longitude, y = lat
 
 ggmap(map, fullpage = TRUE) + geom_point(data = combined, aes(x = longitude, y = latitude,color = as.factor(clus)), size = 2)
 
-ggmap(map, fullpage = TRUE) +geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'red', size = 2)
+ggmap(map, fullpage = TRUE) +geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'red', size = 2)+
+  geom_point(data = clu2, aes(x = longitude, y = latitude), color ="purple", size = 2)
+  
 #----------------John's code---------------------------------
 calendar <- read.csv("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/Project1/boston-airbnb-open-data/calendar.csv")
 
