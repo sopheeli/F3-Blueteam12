@@ -111,10 +111,10 @@ calendar_percent$sum_cost = calendar_percent$V1
 
 calendar_unique = dplyr::select(calendar_percent, listing_id, percent_full, sum_cost)
 
-combined_all = left_join(combined, calendar_unique, by = "listing_id")
+combined = left_join(combined, calendar_unique, by = "listing_id")
 #############################
 
-toC<- cbind(combined$avg,combined$std.lat,combined$std.lon)
+toC<- cbind(combined$avg,combined$std.lat,combined$std.lon, combined$percent_full, combined$sum_cost)
 
 clusters.c <- hclust(dist(toC),method="complete")
 
@@ -129,7 +129,7 @@ plot(clusters.s)
 plot(clusters.a)
 
 #assumption made here, assume use complete method with 5 clusters
-combined$clus <- cutree(clusters.c,5)
+combined$clus <- cutree(clusters.c,6)
 
 clu1 <- combined %>% filter(clus == 1)
 mean(clu1$avg)
@@ -151,7 +151,9 @@ clu5 <- combined %>% filter(clus == 5)
 mean(clu5$avg)
 #-3.275934
 
-#clu6 <- combined %>% filter(clus == 6)
+clu6 <- combined %>% filter(clus == 6)
+mean(clu6$avg)
+#0.0002931953
 
 #clu7 <- combined %>% filter(clus == 7)
 
@@ -159,4 +161,6 @@ ggmap(map, fullpage = TRUE) + geom_point(data = clu1, aes(x = longitude, y = lat
   geom_point(data = clu2, aes(x = longitude, y = latitude), color = 'red', size = 2) + 
   geom_point(data = clu3, aes(x = longitude, y = latitude), color = 'blue', size = 2)+
   geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'purple', size = 2)+
-  geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'green', size = 2)
+  geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'green', size = 2) +
+  geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'gray', size = 2)
+
