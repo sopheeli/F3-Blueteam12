@@ -15,20 +15,29 @@ library(text2vec)
 library(readr)
 library(tidytext)
 
+#if(!requireNamespace("devtools")) install.packages("devtools")
+#devtools::install_github("dkahle/ggmap", ref = "tidyup")
+
 #--------------------------get google map work--------------------------------------#
 #download boston_1.Rdata on github, then run this code. if ggmap is load, should work
-load("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/boston_1.rdata")
+#load("/Users/johnpamplin/Documents/GitHub/F3-Blueteam12/Clustering/boston_1.RData")
 
-#register_google("AIzaSyBdQvxweoFWqcM6oHjuRTEPtCLguSXRiT0")
+ggmap::register_google("AIzaSyBdQvxweoFWqcM6oHjuRTEPtCLguSXRiT0")
 
-map <- get_map(location = "Boston",zoom=11)
+map <- get_map(location = "Boston", zoom=12)
 
-#ggmap(map)
+ggmap(map)
 #save(map,file = "boston_2.RData")   
 
 
 #-------------------------------------------------------------------------------
-reviews <- read_csv("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/Project1/boston-airbnb-open-data/reviews.csv")
+reviews <- read_csv("/Users/johnpamplin/Documents/RStudio/Clustering/Data/reviews.csv")
+#################################################################################################################
+#     CJP - file load 
+# listings <- read.csv("~/Documents/RStudio/Clustering/Data/listings.csv", comment.char="#")
+# reviews <- read.csv("~/Documents/RStudio/Clustering/Data/reviews.csv", comment.char="#")
+# calendar <- read.csv("~/Documents/RStudio/Clustering/Data/calendar.csv")
+#################################################################################################################
 View(reviews)
 
 # the word bank with sentiment score
@@ -64,7 +73,7 @@ score$avg <- scale(score$avg)
 hist(score$avg)
 
 # combine the house info
-listings <- read_csv("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/Project1/boston-airbnb-open-data/listings.csv")
+listings <- read_csv("/Users/johnpamplin/Documents/RStudio/Clustering/Data/listings.csv")
 
 colnames(listings)[1] <- "listing_id"
 
@@ -81,6 +90,29 @@ plot(combined$price_per_accommodate,combined$avg)
 combined$std.lat <- scale(combined$latitude)
 
 combined$std.lon <- scale(combined$longitude)
+
+############################# Adding listing data into the combine data ############################# 
+summary(calendar)
+calendar$price = as.numeric(calendar$price)
+calendar$total = 1
+calendar$is_full = ifelse((calendar$available == "f"), 0, 1)
+calendar$price = ifelse((calendar$price == 1), 0, calendar$price)
+
+DT <- data.table(calendar)
+x = DT[, sum(total), by = listing_id]
+y = DT[, sum(is_full), by = listing_id]
+z = DT[, sum(price), by = listing_id]
+
+calendar_percent = inner_join(x,y, by = "listing_id")
+calendar_percent = inner_join(calendar_percent,z, by = "listing_id")
+
+calendar_percent$percent_full = (calendar_percent$V1.y / calendar_percent$V1.x)
+calendar_percent$sum_cost = calendar_percent$V1
+
+calendar_unique = dplyr::select(calendar_percent, listing_id, percent_full, sum_cost)
+
+combined_all = left_join(combined, calendar_unique, by = "listing_id")
+#############################
 
 toC<- cbind(combined$avg,combined$std.lat,combined$std.lon)
 

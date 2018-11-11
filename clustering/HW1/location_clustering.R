@@ -9,7 +9,7 @@ library(dplyr) # for data manipulation
 
 # Read in Data ------------------------------------------------------------
 
-your_data_file_path <- "IAA/Fall 3/clustering/data/"
+your_data_file_path <- "IAA/Fall 3/clustering/data/" 
 
 
 calendar <- read_csv(paste0(your_data_file_path,"calendar.csv"))
