@@ -1,4 +1,4 @@
-####Simulation HW1########
+  ####Simulation HW1########
 ####   Sophee     ########
 #### 11/5/2018    ########
 ####  ........    ########
@@ -10,10 +10,13 @@
 library(ks)
 library(dplyr)
 library(EnvStats)
-
+library(triangle)
+library(readxl)
+library(rlist)
+  
 #-------------------------Data Preperation---------------------------------#
 #I calculate average cost and average return in the original excel, and save to a csv file
-drill <- read.csv("C:/Users/Sophe/Desktop/FALL/Fall3/SimulationandRiskAnalysis/Project/HW1/Drilling Cost_1.csv")
+drill <- read.csv("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/Drilling Cost_1.csv")
 
 #subset only to look year 1990 to 2007
 drill1 <- subset(drill, drill$Date>1990 & drill$Date<2007)
@@ -108,12 +111,10 @@ mtext("2006 Cost", at=drill1$Average.Cost[16], col="red")
 # Year "0" Costs ----------------------------------------------------------
 
 n_sims <- 50
-lease_costs <- rnorm(n = 50, mean = 600, sd = 50) * 960
-seismic_costs <- rnorm(n = 50, mean = 3, sd = 0.35) * 43000
-completion_costs <- rnorm(n=50, mean = 390000, sd=50000)
+lease_costs <- rnorm(n = n_sims, mean = 600, sd = 50) * 960
+seismic_costs <- rnorm(n = n_sims, mean = 3, sd = 0.35) * 43000
+completion_costs <- rnorm(n=n_sims, mean = 390000, sd=50000)
 overhead_costs <- rtriangle(n=n_sims, a = 172000, b = 279500, c=215000)
-
-
 
 # Production Risk ---------------------------------------------------------
 
@@ -137,7 +138,7 @@ destandardize <- function(x.std, x){
 
 # Create correlated values of initial production costs and rates of decline
 for(j in 1:n_sims){
-  
+  # why take log on the mean and sd?
   initial_production <- rlnorm(n = n_sims, meanlog = log(420), sdlog = log(120))
   rate_of_decline <- runif(n = n_sims, min = 0.15, max = 32 )
   
@@ -161,15 +162,36 @@ mtext("Initial Inv.", at=1000, col="red")
 
 
 
+# revenue -----------------------------------------------------------------
 
-#----------------------------------Draft-------------------------------------#
-P2006 <- drill1$Average.Cost[17]
-P2007 <- P2006*(1+r)
-hist(P2007)
-P2008 <- P2007*(1+r)
-P2009 <- P2008*(1+r)
-P2010 <- P2009*(1+r)
-P2011 <- P2010*(1+r)
-P06_12 <- (P2006+P2007+P2008+P2009+P2010+P2011)/6
-hist(P06_12)
+oil_pred <- read_excel("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/Analysis_Data.xlsx")
+View(oil_pred)
+colnames(oil_pred) <- oil_pred[2,]
+oil_pred <- oil_pred[c(3:nrow(oil_pred)),]
+
+rev <- list()
+for (i in 1:nrow(oil_pred)) {
+  for(j in 1:n_sims){
+    oil_price <- rtriangle(n = n_sims, a = oil_pred[i, 2], b = oil_pred[i, 1], c = oil_pred[i, 3])
+    # production <- 
+    nri <- rnorm(n = n_sims, mean = 0.75, sd = 0.02)
+    rev_adj <- oil_price*production*nri*0.954
+    # rev <- list.append(rev, rev_adj)
+  }
+}
+
+
+
+# operating expense -------------------------------------------------------
+
+for (i in 1:nrow(oil_pred)) {
+  for(j in 1:n_sims){
+    operating_cost <- rnorm(n = n_sims, mean = 2.25, sd = 0.3)
+    total_operating_cost <- operating_cost*production
+  }
+}
+
+
+# NPV ---------------------------------------------------------------------
+
 
