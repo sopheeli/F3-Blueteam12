@@ -8,12 +8,12 @@
 
 library(ks)
 library(triangle)
-library(rlist)
 library(graphics)
 library(readxl)
 library(dplyr)
 library(EnvStats)
 library(ggplot2)
+library(readr)
 
 #set up working directory
 setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
@@ -231,6 +231,7 @@ for (year in seq(1:n_years)) {
 # Calculate Net Present Revenue (NPR) -----------------------------------------------------------------
 
 # Jerry's access
+
 oil_pred <- read_excel("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/Analysis_Data.xlsx")
 oil_pred <- oil_pred[c(3:nrow(oil_pred)),]
 oil_pred <- data.frame(oil_pred)
@@ -242,6 +243,7 @@ colnames(oil_pred) <- c("year", "high_price", "low_price", "aeo_ref")
 #                      skip = 3,
 #                      col_names = column_names)
 # colnames(oil_pred) <- column_names
+
 oil_pred$high_price <- as.numeric(oil_pred$high_price)
 oil_pred$low_price <- as.numeric(oil_pred$low_price)
 oil_pred$aeo_ref <- as.numeric(oil_pred$aeo_ref)
@@ -281,6 +283,7 @@ sum <- 0
 for (i in 1:n_years) {
   sum <- sum + (rev[, i] - operating_cost[, i] - overhead_costs - lease_costs) / (1.1^i)
 }
+
 NPV <- -(completion_costs + seismic_costs + cost_n + overhead_costs + lease_costs) + sum
 
 dry_cost <- overhead_costs + lease_costs + seismic_costs + cost_n

@@ -1,0 +1,464 @@
+######################clustering#########################
+####################sentiment and location###############
+####################11/9/2018############################
+
+library(readr)
+library(lubridate)
+library(ggplot2)
+library(ggmap)
+library(dplyr)
+library(data.table)
+library(ggrepel)
+library(tidytext)
+library(stringr)
+library(text2vec)
+#install.packages("geosphere")
+library(geosphere)
+
+#--------------------------get google map work--------------------------------------#
+#download boston_1.Rdata on github, then run this code. if ggmap is load, should work
+#load("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/boston_1.rdata")
+
+register_google("AIzaSyBdQvxweoFWqcM6oHjuRTEPtCLguSXRiT0")
+
+map <- get_map(location = "Boston",zoom=14)
+
+ggmap(map)
+#save(map,file = "boston_2.RData")   
+
+
+#-------------------------------------------------------------------------------#
+reviews <- read_csv("/Users/johnpamplin/Documents/RStudio/Clustering/Data/reviews.csv")
+#reviews <- read_csv("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/Project1/boston-airbnb-open-data/reviews.csv")
+#View(reviews)
+
+# the word bank with sentiment score
+nrc_total <- get_sentiments("afinn")
+
+rv <- reviews %>%
+  group_by(listing_id) %>%
+  count(listing_id, sort = TRUE) %>%
+  filter(n >= 10) %>%
+  select(-"n")
+
+# get the sentiment score
+new_reviews <- reviews %>%
+  group_by(listing_id) %>%
+  unnest_tokens(word, comments)  %>%
+  right_join(rv,by="listing_id") %>% filter(!is.na(word)) %>%
+  left_join(nrc_total,by="word") %>% filter(!is.na(score))
+
+# summarize the score of each house, and count the number of words each house recieves, 
+
+# then calculate the average score
+score <- new_reviews %>%
+  group_by(listing_id) %>%
+  mutate(sscore = sum(score), n = n()) %>%
+  distinct(listing_id,sscore, n) %>%
+  mutate(avg = sscore / n)
+
+hist(score$avg)
+
+# standardize the score
+score$avg <- scale(score$avg)
+
+hist(score$avg)
+
+# combine the house info
+listings <- read_csv("/Users/johnpamplin/Documents/RStudio/Clustering/Data/listings.csv")
+#listings <- read_csv("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/Project1/boston-airbnb-open-data/listings.csv")
+
+colnames(listings)[1] <- "listing_id"
+
+combined <- score %>%
+  left_join(listings) %>%
+  mutate(price = as.numeric(str_sub(price, start = 2))) %>%
+  mutate(price_per_bedroom = price / bedrooms, price_per_accommodate = price / accommodates)
+
+plot(combined$price_per_bedroom,combined$avg)
+
+plot(combined$price_per_accommodate,combined$avg)
+
+
+combined$std.lat <- scale(combined$latitude)
+
+combined$std.lon <- scale(combined$longitude)
+
+#----------------John's code---------------------------------
+calendar <- read.csv("/Users/johnpamplin/Documents/RStudio/Clustering/Data/calendar.csv")
+
+summary(calendar)
+
+calendar$price = as.numeric(calendar$price)
+
+calendar$total = 1
+
+calendar$is_full = ifelse((calendar$available == "f"), 0, 1)
+
+calendar$price = ifelse((calendar$price == 1), 0, calendar$price)
+
+
+DT <- data.table(calendar)
+
+x = DT[, sum(total), by = listing_id]
+y = DT[, sum(is_full), by = listing_id]
+z = DT[, sum(price), by = listing_id]
+
+
+calendar_percent = inner_join(x,y, by = "listing_id")
+
+calendar_percent = inner_join(calendar_percent,z, by = "listing_id")
+
+calendar_percent$percent_full = (calendar_percent$V1.y / calendar_percent$V1.x)
+
+calendar_percent$sum_cost = calendar_percent$V1
+
+calendar_unique = dplyr::select(calendar_percent, listing_id, percent_full, sum_cost)
+
+combined = left_join(combined, calendar_unique, by = "listing_id")
+
+combined <- combined %>%
+  filter(beds != 0)
+combined$price_per_bed <- combined$price/combined$beds
+
+########################################################################################################################################################################
+#install.packages("Imap")
+library(Imap)
+
+register_google("AIzaSyBdQvxweoFWqcM6oHjuRTEPtCLguSXRiT0")
+
+map <- get_map(location = "Boston",zoom=11)
+
+ggmap(map)
+
+ReplaceLowerOrUpperTriangle <- function(m, triangle.to.replace){
+  # If triangle.to.replace="lower", replaces the lower triangle of a square matrix with its upper triangle.
+  # If triangle.to.replace="upper", replaces the upper triangle of a square matrix with its lower triangle.
+  
+  if (nrow(m) != ncol(m)) stop("Supplied matrix must be square.")
+  if      (tolower(triangle.to.replace) == "lower") tri <- lower.tri(m)
+  else if (tolower(triangle.to.replace) == "upper") tri <- upper.tri(m)
+  else stop("triangle.to.replace must be set to 'lower' or 'upper'.")
+  m[tri] <- t(m)[tri]
+  return(m)
+}
+
+GeoDistanceInMetresMatrix <- function(df.geopoints){
+  # Returns a matrix (M) of distances between geographic points.
+  # M[i,j] = M[j,i] = Distance between (df.geopoints$lat[i], df.geopoints$lon[i]) and
+  # (df.geopoints$lat[j], df.geopoints$lon[j]).
+  # The row and column names are given by df.geopoints$name.
+  
+  GeoDistanceInMetres <- function(g1, g2){
+    # Returns a vector of distances. (But if g1$index > g2$index, returns zero.)
+    # The 1st value in the returned vector is the distance between g1[[1]] and g2[[1]].
+    # The 2nd value in the returned vector is the distance between g1[[2]] and g2[[2]]. Etc.
+    # Each g1[[x]] or g2[[x]] must be a list with named elements "index", "lat" and "lon".
+    # E.g. g1 <- list(list("index"=1, "lat"=12.1, "lon"=10.1), list("index"=3, "lat"=12.1, "lon"=13.2))
+    DistM <- function(g1, g2){
+      require("Imap")
+      return(ifelse(g1$index > g2$index, 0, gdist(lat.1=g1$lat, lon.1=g1$lon, lat.2=g2$lat, lon.2=g2$lon, units="m")))
+    }
+    return(mapply(DistM, g1, g2))
+  }
+  
+  n.geopoints <- nrow(df.geopoints)
+  
+  # The index column is used to ensure we only do calculations for the upper triangle of points
+  df.geopoints$index <- 1:n.geopoints
+  
+  # Create a list of lists
+  list.geopoints <- by(df.geopoints[,c("index", "lat", "lon")], 1:n.geopoints, function(x){return(list(x))})
+  
+  # Get a matrix of distances (in metres)
+  mat.distances <- ReplaceLowerOrUpperTriangle(outer(list.geopoints, list.geopoints, GeoDistanceInMetres), "lower")
+  
+  # Set the row and column names
+  rownames(mat.distances) <- df.geopoints$name
+  colnames(mat.distances) <- df.geopoints$name
+  
+  return(mat.distances)
+}
+
+
+
+lat_lon = cbind(combined$listing_id, combined$latitude, combined$longitude)
+
+df = as.data.frame(lat_lon)
+
+names(df) = c("index", "lat", "lon")
+dft = t(df)
+
+dist_matrix = GeoDistanceInMetresMatrix(df)
+
+clusters.d <- hclust(dist(dist_matrix),method="complete")
+plot(clusters.d)
+
+combined$clus <- cutree(clusters.d,6)
+
+clu1 <- combined %>% filter(clus == 1)
+
+clu2 <- combined %>% filter(clus == 2)
+
+clu3 <- combined %>% filter(clus == 3)
+
+clu4 <- combined %>% filter(clus == 4)
+
+clu5 <- combined %>% filter(clus == 5)
+
+clu6 <- combined %>% filter(clus == 6)
+
+
+# write.csv(clu1, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu1.csv")
+# write.csv(clu2, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu2.csv")
+# write.csv(clu3, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu3.csv")
+# write.csv(clu4, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu4.csv")
+# write.csv(clu5, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu5.csv")
+# write.csv(clu6, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu6.csv")
+
+ggmap(map, fullpage = TRUE) + geom_point(data = combined, aes(x = longitude, y = latitude,color = as.factor(clus)), size = 2)
+#############################
+#combined = clu1
+# combined = clu2
+ combined = clu3
+# combined = clu4
+# combined = clu5
+# combined = clu6
+#############################
+setDT(combined)
+#old north church 
+combined$NC_lon = -71.0544
+combined$NC_lat = 42.3663
+combined[, bos_NC := distHaversine(matrix(c(NC_lon, NC_lat), ncol = 2),
+                                   matrix(c(longitude, latitude), ncol = 2))]
+
+#fenway park
+combined$fen_lon = -71.0972
+combined$fen_lat = 42.3467
+combined[, bos_fen := distHaversine(matrix(c(fen_lon, fen_lat), ncol = 2),
+                                    matrix(c(longitude, latitude), ncol = 2))]
+
+# # harvard square 
+# combined$HS_lon = -71.1190
+# combined$HS_lat = 42.3736
+# combined[, bos_HS := distHaversine(matrix(c(HS_lon, HS_lon), ncol = 2),
+#                                      matrix(c(longitude, latitude), ncol = 2))]
+
+#boston commons 
+combined$BC_lon = -71.0655
+combined$BC_lat = 42.3550
+combined[, bos_BC := distHaversine(matrix(c(BC_lon, BC_lat), ncol = 2),
+                                     matrix(c(longitude, latitude), ncol = 2))]
+#############################
+
+#############################
+#-----------------end of John's code -----------------------------------#
+
+toC<- cbind(
+  scale(combined$bos_NC**2),
+  scale(combined$bos_fen**2),
+  #scale(combined$bos_HS**2),
+  scale(combined$bos_BC**2),
+  3*scale(combined$percent_full),
+  scale(combined$price),
+  scale(combined$review_scores_location),
+  scale(combined$review_scores_rating), 
+  3*scale(combined$avg))
+
+#toC<- cbind(combined$avg,combined$std.lat,combined$std.lon)
+toC<- cbind(
+            2*combined$std.lat,
+            2*combined$std.lon, 
+            1.5*scale(combined$percent_full),
+            scale(combined$price_per_bed),
+            2*scale(combined$review_scores_location),
+            scale(combined$review_scores_rating), 
+            3*scale(combined$avg))
+
+toC<- cbind(
+  5*combined$std.lat,
+  5*combined$std.lon, 
+  scale(combined$percent_full),
+  scale(combined$sum_cost),
+  scale(combined$price_per_bed),
+  scale(combined$review_scores_location),
+  4*scale(combined$review_scores_rating), 
+  2*scale(combined$avg))
+
+toC<- cbind(
+  5*combined$std.lat,
+  5*combined$std.lon, 
+  3*scale(combined$percent_full),
+  scale(combined$price_per_bed),
+  scale(combined$review_scores_location),
+  2*scale(combined$review_scores_rating), 
+  3*scale(combined$avg))
+
+############ pretty good ################# #################
+toC<- cbind(
+  5*combined$std.lat,
+  5*combined$std.lon, 
+  3*scale(combined$percent_full),
+  scale(combined$price_per_bed),
+  scale(combined$review_scores_location),
+  scale(combined$review_scores_rating), 
+  3*scale(combined$avg))
+################# ################# ################# #################
+# no location
+toC<- cbind(
+            scale(combined$percent_full),
+            scale(combined$price),
+            scale(combined$review_scores_location),
+            scale(combined$review_scores_rating), 
+            scale(combined$avg)
+            )
+
+clusters.c <- hclust(dist(toC),method="complete")
+
+clusters.s <- hclust(dist(toC), method="single")
+
+clusters.a <- hclust(dist(toC), method="average")
+
+plot(clusters.c)
+
+plot(clusters.s)
+
+plot(clusters.a)
+
+#assumption made here, assume use complete method with 5 clusters
+combined$clust <- cutree(clusters.c,4)
+
+#tells the summary of each cluster
+combined %>%
+  group_by(clust) %>%
+  summarise(avg_bookrate = mean(percent_full),
+            avg_sentiment = mean(avg),
+            avg_price_bed = mean(price_per_bed),
+            avg_price = mean(price),
+            avg_location = mean(review_scores_location),
+            avt_review = mean(review_scores_rating),
+            num = n())
+
+clut1 <- combined %>% filter(clust == 1)
+
+clut2 <- combined %>% filter(clust == 2)
+
+clut3 <- combined %>% filter(clust == 3)
+
+clut4 <- combined %>% filter(clust == 4)
+
+clut5 <- combined %>% filter(clust == 5)
+
+clut6 <- combined %>% filter(clust == 6)
+
+clut7 <- combined %>% filter(clust == 7)
+
+clut8 <- combined %>% filter(clust == 8)
+
+clut9 <- combined %>% filter(clust == 9)
+
+clut10 <- combined %>% filter(clust == 10)
+
+map <- get_map(location = "Boston",zoom=12)
+ggmap(map, fullpage = TRUE) + geom_point(data = combined, aes(x = longitude, y = latitude, color = as.factor(clust)), size = 2)
+
+
+ggmap(map, fullpage = TRUE) + geom_point(data = clut3, aes(x = longitude, y = latitude), color = 'red', size = 2) + 
+  geom_point(data = clut4, aes(x = longitude, y = latitude), color = 'red', size = 2) + 
+  geom_point(data = clut5, aes(x = longitude, y = latitude), color = 'red', size = 2) +
+  geom_point(data = clut4, aes(x = longitude, y = latitude), color = 'yellow', size = 2)
+
+
+ggmap(map, fullpage = TRUE) +geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'red', size = 2)
+
+
+ggmap(map, fullpage = TRUE) + geom_point(data = clu6, aes(x = longitude, y = latitude), color = 'green', size = 2) + 
+  geom_point(data = clu8, aes(x = longitude, y = latitude), color = 'green', size = 2) + 
+  geom_point(data = clu6, aes(x = longitude, y = latitude), color = 'red', size = 2) +
+  geom_point(data = clu8, aes(x = longitude, y = latitude), color = 'red', size = 2)
+
+
+
+#----------------John's code---------------------------------
+
+
+
+
+#toC<- cbind(combined$avg,combined$std.lat,combined$std.lon)
+toC<- cbind(
+  5*combined$std.lat,
+  5*combined$std.lon, 
+  scale(combined$percent_full),
+  scale(combined$price_per_bed),
+  scale(combined$review_scores_location),
+  scale(combined$review_scores_rating), 
+  scale(combined$avg), 
+  scale(combined$price),
+  scale(combined$number_of_reviews)
+  )
+
+#toC<- cbind(combined$avg,combined$std.lat,combined$std.lon)
+toC<- cbind(
+  2*combined$std.lat,
+  2*combined$std.lon, 
+  scale(combined$percent_full),
+  scale(combined$review_scores_location),
+  scale(combined$price)
+)
+
+#toC<- cbind(combined$avg,combined$std.lat,combined$std.lon)
+toC<- cbind(
+  scale(combined$avg), 
+  2*scale(combined$price),
+  2*scale(combined$percent_full),
+  scale(combined$review_scores_location)
+)
+
+clusters.c <- hclust(dist(toC),method="complete")
+
+clusters.s <- hclust(dist(toC), method="single")
+
+clusters.a <- hclust(dist(toC), method="average")
+
+plot(clusters.c)
+
+plot(clusters.s)
+
+plot(clusters.a)
+
+#assumption made here, assume use complete method with 5 clusters
+combined$clus <- cutree(clusters.c,5)
+
+#tells the summary of each cluster
+combined %>%
+  group_by(clus) %>%
+  summarise(avg_bookrate = mean(percent_full),
+            avg_sentiment = mean(avg),
+            avg_price_bed = mean(price_per_bed),
+            avg_price = mean(price),
+            avg_location = mean(review_scores_location),
+            avt_review = mean(review_scores_rating),
+            num = n())
+
+clu1 <- combined %>% filter(clus == 1)
+
+clu2 <- combined %>% filter(clus == 2)
+
+clu3 <- combined %>% filter(clus == 3)
+
+clu4 <- combined %>% filter(clus == 4)
+
+clu5 <- combined %>% filter(clus == 5)
+
+clu6 <- combined %>% filter(clus == 6)
+
+clu7 <- combined %>% filter(clus == 7)
+
+ggmap(map, fullpage = TRUE) + geom_point(data = clu5, aes(x = longitude, y = latitude), color = 'red', size = 2) + 
+  geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'blue', size = 2) + 
+  geom_point(data = clu3, aes(x = longitude, y = latitude), color = 'green', size = 2) +
+  geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'green', size = 2)
+
+ggmap(map, fullpage = TRUE) + geom_point(data = combined, aes(x = longitude, y = latitude,color = as.factor(clus)), size = 2)
+
+ggmap(map, fullpage = TRUE) +geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'red', size = 2)
