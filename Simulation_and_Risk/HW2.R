@@ -288,6 +288,28 @@ NPV <- -(completion_costs + seismic_costs + cost_n + overhead_costs + lease_cost
 
 dry_cost <- overhead_costs + lease_costs + seismic_costs + cost_n
 
-min(overhead_costs)
+# 
 hist(NPV, breaks = 50)
 hist(dry_cost)
+
+# NPV ----------------------------------------
+# worst case
+min(NPV)
+# negative NPV well rate
+length(NPV[NPV < 0 ]) / length(NPV)
+
+# .1% 
+VaR_NPV <- quantile(NPV, 0.001)
+
+# CVaR
+mean(NPV[NPV <= VaR_NPV])
+
+# dry cost ------------------------------------
+# worst case
+max(dry_cost)
+
+# .1%
+VaR_dry_cost <- quantile(dry_cost, 0.999)
+
+# CVaR
+mean(dry_cost[dry_cost >= VaR_dry_cost])
