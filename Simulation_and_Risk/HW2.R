@@ -16,13 +16,16 @@ library(EnvStats)
 library(ggplot2)
 
 #set up working directory
-#setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
-setwd("C:/Users/Christopher/Documents/IAA/Fall 3/simulation")
+setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
+#setwd("C:/Users/Christopher/Documents/IAA/Fall 3/simulation")
   
   
 # number of single well simulations
-n_sims <- 100000
-n = 100000
+n_sims <- 10000
+n = 10000
+n_wells <- n_sims # the number of wells we are considering
+n_years <- length(seq(2019,2050)) # the number of years
+set.seed(8888)
 
 #import data from the XLSX 
 drill = read_excel("Analysis_Data.xlsx", sheet = 2, skip = 2)
@@ -52,8 +55,6 @@ x = as.data.frame(c(drill1$Return.Crude.Oil, drill1$Return.Natural.Gas, drill1$R
 #-------------------------Kernel Density---------------------------------#
 
 #Kernel Estimation for 2006 to 2012 based on historical data from 1991 to 2006
-
-set.seed(8888)
 
 Density.R <- density(c(drill1$Return.Crude.Oil,drill1$Return.Natural.Gas,drill1$Return.Dry.Well),bw="SJ-ste")
 
@@ -167,9 +168,6 @@ overhead_costs <- rtriangle(n=n_sims, a = 172000, b = 279500, c=215000)
 #
 # These values are correlated (0.64), so we will use a correlation matrix to bend the random initial
 
-n_wells <- n_sims # the number of wells we are considering
-n_years <- length(seq(2019,2050)) # the number of years
-
 R <- matrix(data=cbind(1, 0.64, 0.64, 1), nrow=2)
 U <- t(chol(R))
 
@@ -233,20 +231,17 @@ for (year in seq(1:n_years)) {
 # Calculate Net Present Revenue (NPR) -----------------------------------------------------------------
 
 # Jerry's access
-#oil_pred <- read_excel("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/Analysis_Data.xlsx")
+oil_pred <- read_excel("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/Analysis_Data.xlsx")
 oil_pred <- oil_pred[c(3:nrow(oil_pred)),]
 oil_pred <- data.frame(oil_pred)
-oil_pred$High.Oil.Price <- as.numeric(oil_pred$High.Oil.Price)
-oil_pred$Low.Oil.Price <- as.numeric(oil_pred$Low.Oil.Price)
-oil_pred$AEO2018.Reference <- as.numeric(oil_pred$AEO2018.Reference)
+colnames(oil_pred) <- c("year", "high_price", "low_price", "aeo_ref")
 
-# Chris' access 
-file_path <- "C:/Users/Christopher/Documents/IAA/Fall 3/F3-Blueteam12/Simulation_and_Risk/price_projections.csv"
-column_names = c("year", "high_price", "low_price", "aeo_ref")
-oil_pred <- read_csv(file = file_path,
-                     skip = 3,
-                     col_names = column_names)
-colnames(oil_pred) <- column_names
+# # Chris' access 
+# file_path <- "C:/Users/Christopher/Documents/IAA/Fall 3/F3-Blueteam12/Simulation_and_Risk/price_projections.csv"
+# oil_pred <- read_csv(file = file_path,
+#                      skip = 3,
+#                      col_names = column_names)
+# colnames(oil_pred) <- column_names
 oil_pred$high_price <- as.numeric(oil_pred$high_price)
 oil_pred$low_price <- as.numeric(oil_pred$low_price)
 oil_pred$aeo_ref <- as.numeric(oil_pred$aeo_ref)
@@ -255,7 +250,7 @@ oil_pred$aeo_ref <- as.numeric(oil_pred$aeo_ref)
 severance_tax <- (1 - 0.046)
 rev <- c()
 operating_cost <- c()
-
+View(oil_pred)
 
 for (year in 1:n_years) {
   
@@ -280,13 +275,16 @@ for (year in 1:n_years) {
     operating_cost <- cbind(operating_cost, total_operating_cost)
 }
 
-
 # NPV ---------------------------------------------------------------------
 
 sum <- 0
 for (i in 1:n_years) {
-  sum <- sum + (rev[, i] - operating_cost[, i] - lease_costs[i] - overhead_costs[i]) / (1.1^i)
+  sum <- sum + (rev[, i] - operating_cost[, i] - overhead_costs - lease_costs) / (1.1^i)
 }
-NPV <- -(cost_n + seismic_costs + completion_costs) + sum
+NPV <- -(completion_costs + seismic_costs + cost_n + overhead_costs + lease_costs) + sum
 
-hist(NPV)
+dry_cost <- overhead_costs + lease_costs + seismic_costs + cost_n
+
+min(overhead_costs)
+hist(NPV, breaks = 50)
+hist(dry_cost)
