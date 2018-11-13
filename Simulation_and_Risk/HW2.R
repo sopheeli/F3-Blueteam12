@@ -287,6 +287,6 @@ sum <- 0
 for (i in 1:n_years) {
   sum <- sum + (rev[, i] - operating_cost[, i] - lease_costs[i] - overhead_costs[i]) / (1.1^i)
 }
-NPV <- -(cost_n + seismic_costs + completion_costs + overhead_costs) + sum
+NPV <- -(cost_n + seismic_costs + completion_costs + overhead_costs + lease_costs) + sum
 
 hist(NPV)
