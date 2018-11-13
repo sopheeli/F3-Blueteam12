@@ -120,14 +120,22 @@ combined$price_per_bed <- combined$price/combined$beds
 #-----------------end of John's code -----------------------------------#
 
 #toC<- cbind(combined$avg,combined$std.lat,combined$std.lon)
-toC<- cbind(1.25*combined$std.lat,1.25*combined$std.lon, scale(combined$avg),scale(combined$percent_full),scale(combined$price_per_bed),
-            scale(combined$review_scores_location),scale(combined$review_scores_rating))
+toC<- cbind(
+  5*combined$std.lat,
+  5*combined$std.lon, 
+  3*scale(combined$percent_full),
+  scale(combined$price_per_bed),
+  scale(combined$review_scores_location),
+  2*scale(combined$review_scores_rating), 
+  3*scale(combined$avg))
+
 
 clusters.c <- hclust(dist(toC),method="complete")
 
 clusters.s <- hclust(dist(toC), method="single")
 
 clusters.a <- hclust(dist(toC), method="average")
+
 
 plot(clusters.c)
 
@@ -136,9 +144,11 @@ plot(clusters.s)
 plot(clusters.a)
 
 #assumption made here, assume use complete method with 5 clusters
-combined$clus <- cutree(clusters.c,5)
+
+combined$clus <- cutree(clusters.c,4)
 
 #tells the summary of each cluster
+
 combined %>%
   group_by(clus) %>%
   summarise(avg_bookrate = mean(percent_full),
@@ -146,8 +156,8 @@ combined %>%
             avg_price_bed = mean(price_per_bed),
             avg_location = mean(review_scores_location),
             avt_review = mean(review_scores_rating),
-            avg_beds = mean(beds),
             num = n())
+
 
 clu1 <- combined %>% filter(clus == 1)
 
@@ -159,55 +169,22 @@ clu4 <- combined %>% filter(clus == 4)
 
 clu5 <- combined %>% filter(clus == 5)
 
-#clu6 <- combined %>% filter(clus == 6)
+clu6 <- combined %>% filter(clus == 6)
 
-#clu7 <- combined %>% filter(clus == 7)
+clu7 <- combined %>% filter(clus == 7)
 
-ggmap(map, fullpage = TRUE) + geom_point(data = clu1, aes(x = longitude, y = latitude), color = 'yellow', size = 2) + 
-  geom_point(data = clu2, aes(x = longitude, y = latitude), color = 'red', size = 2) + 
-  geom_point(data = clu3, aes(x = longitude, y = latitude), color = 'blue', size = 2)+
-  geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'green', size = 2)
+clu8 <- combined %>% filter(clus == 8)
+
+clu9 <- combined %>% filter(clus == 9)
+
+clu10 <- combined %>% filter(clus == 10)
+
+
+ggmap(map, fullpage = TRUE) + geom_point(data = clu1, aes(x = longitude, y = latitude), color = 'red', size = 2) + 
+  geom_point(data = clu2, aes(x = longitude, y = latitude), color = 'green', size = 2) + 
+  geom_point(data = clu3, aes(x = longitude, y = latitude), color = 'gray', size = 2) +
+  geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'yellow', size = 2)
+
 
 ggmap(map, fullpage = TRUE) + geom_point(data = combined, aes(x = longitude, y = latitude,color = as.factor(clus)), size = 2)
-
-ggmap(map, fullpage = TRUE) +geom_point(data = clu4, aes(x = longitude, y = latitude), color = 'red', size = 2)+
-  geom_point(data = clu2, aes(x = longitude, y = latitude), color ="purple", size = 2)
   
-#----------------John's code---------------------------------
-calendar <- read.csv("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/Project1/boston-airbnb-open-data/calendar.csv")
-
-library(dplyr)
-library(data.table)
-
-summary(calendar)
-
-calendar$price = as.numeric(calendar$price)
-
-calendar$total = 1
-
-calendar$is_full = ifelse((calendar$available == "f"), 0, 1)
-
-calendar$price = ifelse((calendar$price == 1), 0, calendar$price)
-
-
-DT <- data.table(calendar)
-
-x = DT[, sum(total), by = listing_id]
-
-y = DT[, sum(is_full), by = listing_id]
-
-z = DT[, sum(price), by = listing_id]
-
-
-
-calendar_percent = inner_join(x,y, by = "listing_id")
-
-calendar_percent = inner_join(calendar_percent,z, by = "listing_id")
-
-calendar_percent$percent_full = (calendar_percent$V1.y / calendar_percent$V1.x)
-
-calendar_percent$sum_cost = calendar_percent$V1
-
-calendar_unique = dplyr::select(calendar_percent, listing_id, percent_full, sum_cost)
-
-combined = left_join(combined, calendar_unique, by = "listing_id")
