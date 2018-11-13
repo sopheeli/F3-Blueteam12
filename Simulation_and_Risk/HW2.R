@@ -8,12 +8,12 @@
 
 library(ks)
 library(triangle)
-library(rlist)
 library(graphics)
 library(readxl)
 library(dplyr)
 library(EnvStats)
 library(ggplot2)
+library(readr)
 
 #set up working directory
 #setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
@@ -234,11 +234,11 @@ for (year in seq(1:n_years)) {
 
 # Jerry's access
 #oil_pred <- read_excel("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/Analysis_Data.xlsx")
-oil_pred <- oil_pred[c(3:nrow(oil_pred)),]
-oil_pred <- data.frame(oil_pred)
-oil_pred$High.Oil.Price <- as.numeric(oil_pred$High.Oil.Price)
-oil_pred$Low.Oil.Price <- as.numeric(oil_pred$Low.Oil.Price)
-oil_pred$AEO2018.Reference <- as.numeric(oil_pred$AEO2018.Reference)
+#oil_pred <- oil_pred[c(3:nrow(oil_pred)),]
+#oil_pred <- data.frame(oil_pred)
+#oil_pred$High.Oil.Price <- as.numeric(oil_pred$High.Oil.Price)
+#oil_pred$Low.Oil.Price <- as.numeric(oil_pred$Low.Oil.Price)
+#oil_pred$AEO2018.Reference <- as.numeric(oil_pred$AEO2018.Reference)
 
 # Chris' access 
 file_path <- "C:/Users/Christopher/Documents/IAA/Fall 3/F3-Blueteam12/Simulation_and_Risk/price_projections.csv"
@@ -287,6 +287,6 @@ sum <- 0
 for (i in 1:n_years) {
   sum <- sum + (rev[, i] - operating_cost[, i] - lease_costs[i] - overhead_costs[i]) / (1.1^i)
 }
-NPV <- -(cost_n + seismic_costs + completion_costs) + sum
+NPV <- -(cost_n + seismic_costs + completion_costs + overhead_costs) + sum
 
 hist(NPV)
