@@ -1,0 +1,102 @@
+#install.packages("Imap")
+library(Imap)
+
+register_google("AIzaSyBdQvxweoFWqcM6oHjuRTEPtCLguSXRiT0")
+
+map <- get_map(location = "Boston",zoom=11)
+
+ggmap(map)
+
+ReplaceLowerOrUpperTriangle <- function(m, triangle.to.replace){
+  # If triangle.to.replace="lower", replaces the lower triangle of a square matrix with its upper triangle.
+  # If triangle.to.replace="upper", replaces the upper triangle of a square matrix with its lower triangle.
+  
+  if (nrow(m) != ncol(m)) stop("Supplied matrix must be square.")
+  if      (tolower(triangle.to.replace) == "lower") tri <- lower.tri(m)
+  else if (tolower(triangle.to.replace) == "upper") tri <- upper.tri(m)
+  else stop("triangle.to.replace must be set to 'lower' or 'upper'.")
+  m[tri] <- t(m)[tri]
+  return(m)
+}
+
+GeoDistanceInMetresMatrix <- function(df.geopoints){
+  # Returns a matrix (M) of distances between geographic points.
+  # M[i,j] = M[j,i] = Distance between (df.geopoints$lat[i], df.geopoints$lon[i]) and
+  # (df.geopoints$lat[j], df.geopoints$lon[j]).
+  # The row and column names are given by df.geopoints$name.
+  
+  GeoDistanceInMetres <- function(g1, g2){
+    # Returns a vector of distances. (But if g1$index > g2$index, returns zero.)
+    # The 1st value in the returned vector is the distance between g1[[1]] and g2[[1]].
+    # The 2nd value in the returned vector is the distance between g1[[2]] and g2[[2]]. Etc.
+    # Each g1[[x]] or g2[[x]] must be a list with named elements "index", "lat" and "lon".
+    # E.g. g1 <- list(list("index"=1, "lat"=12.1, "lon"=10.1), list("index"=3, "lat"=12.1, "lon"=13.2))
+    DistM <- function(g1, g2){
+      require("Imap")
+      return(ifelse(g1$index > g2$index, 0, gdist(lat.1=g1$lat, lon.1=g1$lon, lat.2=g2$lat, lon.2=g2$lon, units="m")))
+    }
+    return(mapply(DistM, g1, g2))
+  }
+  
+  n.geopoints <- nrow(df.geopoints)
+  
+  # The index column is used to ensure we only do calculations for the upper triangle of points
+  df.geopoints$index <- 1:n.geopoints
+  
+  # Create a list of lists
+  list.geopoints <- by(df.geopoints[,c("index", "lat", "lon")], 1:n.geopoints, function(x){return(list(x))})
+  
+  # Get a matrix of distances (in metres)
+  mat.distances <- ReplaceLowerOrUpperTriangle(outer(list.geopoints, list.geopoints, GeoDistanceInMetres), "lower")
+  
+  # Set the row and column names
+  rownames(mat.distances) <- df.geopoints$name
+  colnames(mat.distances) <- df.geopoints$name
+  
+  return(mat.distances)
+}
+
+
+
+lat_lon = cbind(combined$listing_id, combined$latitude, combined$longitude)
+
+df = as.data.frame(lat_lon)
+
+names(df) = c("index", "lat", "lon")
+dft = t(df)
+
+dist_matrix = GeoDistanceInMetresMatrix(df)
+
+clusters.d <- hclust(dist(dist_matrix),method="complete")
+plot(clusters.d)
+
+combined$clus <- cutree(clusters.d,8)
+
+clu1 <- combined %>% filter(clus == 1)
+
+clu2 <- combined %>% filter(clus == 2)
+
+clu3 <- combined %>% filter(clus == 3)
+
+clu4 <- combined %>% filter(clus == 4)
+
+clu5 <- combined %>% filter(clus == 5)
+
+clu6 <- combined %>% filter(clus == 6)
+
+clu7 <- combined %>% filter(clus == 7)
+
+clu8 <- combined %>% filter(clus == 8)
+
+
+  write.csv(clu1, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu1.csv")
+  write.csv(clu2, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu2.csv")
+  write.csv(clu3, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu3.csv")
+  write.csv(clu4, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu4.csv")
+  write.csv(clu5, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu5.csv")
+  write.csv(clu6, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu6.csv")  
+  write.csv(clu7, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu7.csv")
+  write.csv(clu8, file = "/Users/johnpamplin/Documents/RStudio/Clustering/Data/clu8.csv")
+ 
+ggmap(map, fullpage = TRUE) + geom_point(data = combined, aes(x = longitude, y = latitude,color = as.factor(clus)), size = 2)
+
