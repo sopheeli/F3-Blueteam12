@@ -252,7 +252,9 @@ oil_pred$aeo_ref <- as.numeric(oil_pred$aeo_ref)
 severance_tax <- (1 - 0.046)
 rev <- c()
 operating_cost <- c()
-View(oil_pred)
+
+# Draw a net revenue interest (nri) from a normal distribution
+nri <- rnorm(n = n_sims, mean = 0.75, sd = 0.02)
 
 for (year in 1:n_years) {
   
@@ -264,15 +266,12 @@ for (year in 1:n_years) {
     #Grab that year's total volume produced
     production <- yearly_volume[, year]
     
-    # Draw a net revenue interest (nri) from a normal distribution
-    nri <- rnorm(n = n_sims, mean = 0.75, sd = 0.02)
-    
     # Calculate revenue for the year
     rev <- cbind(rev,
                  oil_price*production*nri*severance_tax)
     
     # Now calculate total operating costs
-    cost <- rnorm(n = n_sims, mean = 2.25, sd = 0.3)
+    cost <- rnorm(n = 1, mean = 2.25, sd = 0.3)
     total_operating_cost <- cost*production
     operating_cost <- cbind(operating_cost, total_operating_cost)
 }
@@ -293,6 +292,9 @@ hist(NPV, breaks = 50)
 hist(dry_cost)
 
 # NPV ----------------------------------------
+# median
+median(NPV)
+
 # worst case
 min(NPV)
 # negative NPV well rate
@@ -305,6 +307,8 @@ VaR_NPV <- quantile(NPV, 0.001)
 mean(NPV[NPV <= VaR_NPV])
 
 # dry cost ------------------------------------
+# median
+median(dry_cost)
 # worst case
 max(dry_cost)
 
