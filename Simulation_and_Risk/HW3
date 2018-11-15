@@ -1,0 +1,46 @@
+#install.packages("truncnorm")
+library(truncnorm)
+library(stats)
+
+set.seed(245642)
+
+
+
+n = 10000
+nn = 10000
+
+proportion_productive <- rep(0,n)
+
+for(i in 1:n){
+  
+  Total_wells = round(runif(1, min = 10, max = 30))
+  wet_wells <- rep(0,Total_wells)
+  
+  Hydrocarbons = rtruncnorm(nn, a=0, b=1, mean=0.99, sd = 0.05)
+  Reservoir = rtruncnorm(nn, a=0, b=1, mean=0.8, sd = 0.1)
+  
+  probability = (Hydrocarbons*Reservoir)
+  productive_well <- rep(0,Total_wells)
+  
+  for(j in 1:Total_wells){
+    wet_wells[j] = rbinom(n=1, 1, probability)
+  }
+  
+  proportion_productive[i] <- sum(wet_wells) / length(wet_wells)
+}
+
+hist(proportion_productive)
+
+dbinom(n, prob)
+
+# wet wells 
+wet_wells = probability*Total_wells
+dry_wells = Total_wells - wet_wells
+proportion = wet_wells / Total_wells
+hist(wet_wells)
+hist(dry_wells)
+hist(proportion)
+
+hist(Hydrocarbons)
+hist(Reservoir)
+hist(Total_wells)
