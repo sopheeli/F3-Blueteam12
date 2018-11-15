@@ -21,8 +21,8 @@ setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
   
   
 # number of single well simulations
-n_sims <- 10000
-n = 10000
+n_sims <- 500000
+n = 500000
 n_wells <- n_sims # the number of wells we are considering
 n_years <- length(seq(2019,2050)) # the number of years
 set.seed(8888)
@@ -280,7 +280,7 @@ for (year in 1:n_years) {
 
 sum <- 0
 for (i in 1:n_years) {
-  sum <- sum + (rev[, i] - operating_cost[, i] - overhead_costs - lease_costs) / (1.1^i)
+  sum <- sum + (rev[, i] - operating_cost[, i] - overhead_costs) / (1.1^i)
 }
 
 NPV <- -(completion_costs + seismic_costs + cost_n + overhead_costs + lease_costs) + sum
@@ -288,8 +288,8 @@ NPV <- -(completion_costs + seismic_costs + cost_n + overhead_costs + lease_cost
 dry_cost <- overhead_costs + lease_costs + seismic_costs + cost_n
 
 # 
-hist(NPV, breaks = 50)
-hist(dry_cost)
+hist(NPV / 1000)
+hist(dry_cost / 1000)
 
 # NPV ----------------------------------------
 # median
