@@ -25,7 +25,7 @@ ggmap(map)
 
 
 #-------------------------------------------------------------------------------
-reviews <- read_csv("C:/Users/Sophe/Desktop/FALL/Fall3/Clustering/Project1/boston-airbnb-open-data/reviews.csv")
+reviews <- read_csv("C:/Users/Jerry/Documents/MSA18/Clustering/boston-airbnb-open-data/reviews.csv")
 View(reviews)
 
 # the word bank with sentiment score
@@ -52,6 +52,12 @@ score <- new_reviews %>%
   mutate(sscore = sum(score), n = n()) %>%
   distinct(listing_id,sscore, n) %>%
   mutate(avg = sscore / n)
+
+ggplot(score) +
+  geom_histogram(aes(x = avg)) +
+  xlab("Average Sentimental Score") +
+  labs(title = "Average Sentimental Score Distribution")
+
 
 hist(score$avg)
 
