@@ -287,9 +287,22 @@ NPV <- -(completion_costs + seismic_costs + cost_n + overhead_costs + lease_cost
 
 dry_cost <- overhead_costs + lease_costs + seismic_costs + cost_n
 
-# 
-hist(NPV / 1000)
-hist(dry_cost / 1000)
+NPV <- NPV / 1000
+dry_cost <- dry_cost / 1000
+well <- data.frame(cbind(NPV / 1000, dry_cost / 1000))
+head(well)
+
+ggplot(well) +
+  geom_histogram(aes(x = NPV)) +
+  xlab("NPV (thousand)") +
+  labs(title = "NPV for Wet Wells") +
+  geom_vline(aes(xintercept = median(NPV), color = "median"))
+
+ggplot(well) +
+  geom_histogram(aes(x = dry_cost)) +
+  xlab("Cost (thousand)") +
+  labs(title = "Cost for Dry Wells") +
+  geom_vline(aes(xintercept = median(dry_cost), color = "median"))
 
 # NPV ----------------------------------------
 # median
