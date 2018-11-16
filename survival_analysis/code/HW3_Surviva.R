@@ -63,29 +63,54 @@ ggsurvplot(survfit(fit_cox), data = katrina, legend = "none", break.y.by = 0.1,
 
 fit_cox$means
 
-# shrinkage factor demonstration:
-# full model
-df_model <- length(fit_cox$coefficients) # number of coefficients in model
-LR_model <- 2*diff(fit_cox$loglik) # LRT statistic from model
-(v_full <- 1 - (df_model/LR_model)) # estimate shrinkage factor
-eta_shrunk <- v_full*predict(fit_cox, newdata = katrina, type = "lp") # shrunken predictions
 
-# fit a smaller model
-fit_small <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + servo + elevation , data = katrina)
-df_small <- length(fit_small$coefficients)
-LR_small <- 2*diff(fit_small$loglik)
-(v_small <- 1 - (df_small/LR_small))
-c(v_full, v_small) # smaller model estimates don't need to be shrunk as much
+######check constant effect########################
+#backup
+fit_strat_backup <- coxph(Surv(hour, reason %in% c(2,3)) ~ strata(backup) + bridgecrane + 
+                     servo + trashrack + elevation + slope + age, data = katrina)
 
-# see the effect of just adding a whole bunch of junk
-# generate 17 random variables that i know are useless
-junk <- matrix(rnorm(17*nrow(katrina)), nrow(katrina), 17)
-fit_junk <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + 
-    bridgecrane + servo + trashrack + elevation + slope + age, data = katrina)
-df_junk <- length(fit_junk$coefficients)
-LR_junk <- 2*diff(fit_junk$loglik)
-(v_junk <- 1 - (df_junk/LR_junk))
-c(v_full, v_small, v_junk) # need to shrink the junk model estimates much more
+ggsurvplot(survfit(fit_strat_backup), data = katrina, fun = "cloglog",
+           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
+           legend.title = "backup", xlab = "log(hour)")
+
+#bridgecrane
+fit_strat_bridgecrane <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + strata(bridgecrane) + 
+                     servo + trashrack + elevation + slope + age, data = katrina)
+
+ggsurvplot(survfit(fit_strat_bridgecrane), data = katrina, fun = "cloglog",
+           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
+           legend.title = "bridgecrane", xlab = "log(hour)")
+
+#servo
+fit_strat_servo <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
+                                 strata(servo) + trashrack + elevation + slope + age, data = katrina)
+
+ggsurvplot(survfit(fit_strat_servo), data = katrina, fun = "cloglog",
+           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
+           legend.title = "servo", xlab = "log(hour)")
+
+#trashrack
+fit_strat_trashrack <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
+                                 servo + strata(trashrack) + elevation + slope + age, data = katrina)
+
+ggsurvplot(survfit(fit_strat_trashrack), data = katrina, fun = "cloglog",
+           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
+           legend.title = "trashrack", xlab = "log(hour)")
+
+
+#######checking linearity, Matt said we don't need to#############################
+# elevation
+visreg(fit_cox, "elevation", xlab = "elevation", ylab = "partial residuals", gg = TRUE,
+       band = FALSE) +
+  geom_smooth(col = "red", fill = "red") + theme_bw()
+# slope
+visreg(fit_cox, "slope", xlab = "slope", ylab = "partial residuals",
+       gg = TRUE, band = FALSE) +
+  geom_smooth(col = "red", fill = "red") + theme_bw()
+#age
+visreg(fit_cox, "age", xlab = "age", ylab = "partial residuals",
+       gg = TRUE, band = FALSE) +
+  geom_smooth(col = "red", fill = "red") + theme_bw()
 
 ### concordance
 concordance(fit_cox)
@@ -115,25 +140,3 @@ ggplot(resids, aes(x = ID, y = res_d, color = factor(event))) +
   geom_point() +
   labs(x = "ID", y = "deviance residuals", color = "event") +
   scale_color_manual(values = c("purple", "orange"))
-
-#######checking linearity#############################
-# elevation
-visreg(fit_cox, "elevation", xlab = "elevation", ylab = "partial residuals", gg = TRUE,
-       band = FALSE) +
-  geom_smooth(col = "red", fill = "red") + theme_bw()
-# slope
-visreg(fit_cox, "slope", xlab = "slope", ylab = "partial residuals",
-       gg = TRUE, band = FALSE) +
-  geom_smooth(col = "red", fill = "red") + theme_bw()
-#age
-visreg(fit_cox, "age", xlab = "age", ylab = "partial residuals",
-       gg = TRUE, band = FALSE) +
-  geom_smooth(col = "red", fill = "red") + theme_bw()
-
-#----------------------------------------------------------------------#
-fit_strata <- coxph(Surv(time = hour, event = reason %in% c(2,3)) ~ strata(backup) + 
-               bridgecrane + servo + trashrack + elevation + slope + age, data = katrina)
-ggsurvplot(survfit(fit_strata), data = katrina, fun='cloglog',
-           palette = c("black", "purple"), legend.labs = c("noupgrade", "upgrade"),
-           legend.title = "backup", xlab = "log(hour)")
-summary(fit_strata)
