@@ -44,7 +44,6 @@ plot(fit_llogisaft, type = "cumhaz", ci = TRUE, conf.int = FALSE, las = 1, bty =
      xlab = "Hour", ylab = "cumulative hazard",
      main = "log-logistic distribution")
 
-
 #create AFT model
 fit_aft <- survreg(Surv(time = hour, event = reason %in% c(2,3)) ~ backup + bridgecrane + servo + 
                  trashrack + elevation + slope + age, data = katrina, dist = "weibull")
@@ -102,13 +101,13 @@ resids <- data.frame(event = fit_cox$y[,dim(fit_cox$y)[2]],
 # martingale vs. time
 ggplot(resids, aes(x = time, y = res_m, color = factor(event))) +
   geom_point() +
-  labs(x = "week", y = "martingale residuals", color = "event") +
+  labs(x = "hour", y = "martingale residuals", color = "event") +
   scale_color_manual(values = c("purple", "orange"))
 
 # deviance vs. time
 ggplot(resids, aes(x = time, y = res_d, color = factor(event))) +
   geom_point() +
-  labs(x = "week", y = "deviance residuals", color = "event") +
+  labs(x = "hour", y = "deviance residuals", color = "event") +
   scale_color_manual(values = c("purple", "orange"))
 
 # deviance vs. ID, to see which one is the largest
@@ -132,7 +131,6 @@ visreg(fit_cox, "age", xlab = "age", ylab = "partial residuals",
   geom_smooth(col = "red", fill = "red") + theme_bw()
 
 #----------------------------------------------------------------------#
-
 fit_strata <- coxph(Surv(time = hour, event = reason %in% c(2,3)) ~ strata(backup) + 
                bridgecrane + servo + trashrack + elevation + slope + age, data = katrina)
 ggsurvplot(survfit(fit_strata), data = katrina, fun='cloglog',
