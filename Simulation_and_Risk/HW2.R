@@ -294,15 +294,17 @@ head(well)
 
 ggplot(well) +
   geom_histogram(aes(x = NPV)) +
-  xlab("NPV (thousand)") +
+  xlab("NPV (thousand USD)") +
   labs(title = "NPV for Wet Wells") +
-  geom_vline(aes(xintercept = median(NPV), color = "median"))
+  geom_vline(aes(xintercept = median(NPV), color = "median")) +
+  geom_vline(aes(xintercept = quantile(NPV, 0.001), color = "VaR"))
 
 ggplot(well) +
   geom_histogram(aes(x = dry_cost)) +
-  xlab("Cost (thousand)") +
+  xlab("Cost (thousand USD)") +
   labs(title = "Cost for Dry Wells") +
-  geom_vline(aes(xintercept = median(dry_cost), color = "median"))
+  geom_vline(aes(xintercept = median(dry_cost), color = "median")) +
+  geom_vline(aes(xintercept = quantile(dry_cost, 0.001), color = "VaR"))
 
 # NPV ----------------------------------------
 # median
