@@ -90,6 +90,7 @@ c(v_full, v_small, v_junk) # need to shrink the junk model estimates much more
 
 ### concordance
 concordance(fit_cox)
+corcordance(fit_aft)
 
 
 resids <- data.frame(event = fit_cox$y[,dim(fit_cox$y)[2]],
