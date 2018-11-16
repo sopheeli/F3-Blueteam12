@@ -16,8 +16,8 @@ library(ggplot2)
 library(readr)
 
 #set up working directory
-setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
-#setwd("C:/Users/Christopher/Documents/IAA/Fall 3/simulation")
+#setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
+setwd("C:/Users/Christopher/Documents/IAA/Fall 3/simulation")
   
   
 # number of single well simulations
@@ -232,17 +232,18 @@ for (year in seq(1:n_years)) {
 
 # Jerry's access
 
-oil_pred <- read_excel("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/Analysis_Data.xlsx")
-oil_pred <- oil_pred[c(3:nrow(oil_pred)),]
-oil_pred <- data.frame(oil_pred)
+#oil_pred <- read_excel("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/Analysis_Data.xlsx")
+#oil_pred <- oil_pred[c(3:nrow(oil_pred)),]
+#oil_pred <- data.frame(oil_pred)
 colnames(oil_pred) <- c("year", "high_price", "low_price", "aeo_ref")
 
+column_names <- c("year", "high_price", "low_price", "aeo_ref")
 # # Chris' access 
-# file_path <- "C:/Users/Christopher/Documents/IAA/Fall 3/F3-Blueteam12/Simulation_and_Risk/price_projections.csv"
-# oil_pred <- read_csv(file = file_path,
-#                      skip = 3,
-#                      col_names = column_names)
-# colnames(oil_pred) <- column_names
+file_path <- "C:/Users/Christopher/Documents/IAA/Fall 3/F3-Blueteam12/Simulation_and_Risk/price_projections.csv"
+oil_pred <- read_csv(file = file_path,
+                     skip = 3,
+                     col_names = column_names)
+
 
 oil_pred$high_price <- as.numeric(oil_pred$high_price)
 oil_pred$low_price <- as.numeric(oil_pred$low_price)
@@ -293,18 +294,26 @@ well <- data.frame(cbind(NPV / 1000, dry_cost / 1000))
 head(well)
 
 ggplot(well) +
-  geom_histogram(aes(x = NPV)) +
-  xlab("NPV (thousand USD)") +
-  labs(title = "NPV for Wet Wells") +
-  geom_vline(aes(xintercept = median(NPV), color = "median")) +
-  geom_vline(aes(xintercept = quantile(NPV, 0.001), color = "VaR"))
+  geom_histogram(aes(x = NPV), bins = 50) +
+  xlab("NPV - Thousand USD") +
+  ylab("Frequency") +
+  labs(title = "Possible Net Present Value of a Single Wet Well") +
+  geom_vline(aes(xintercept = median(NPV), color = "Median")) +
+  geom_vline(aes(xintercept = quantile(NPV, 0.001), color = "0.1% VaR")) +
+  theme_classic() +
+  theme(legend.title=element_blank())
+  
 
 ggplot(well) +
   geom_histogram(aes(x = dry_cost)) +
-  xlab("Cost (thousand USD)") +
-  labs(title = "Cost for Dry Wells") +
-  geom_vline(aes(xintercept = median(dry_cost), color = "median")) +
-  geom_vline(aes(xintercept = quantile(dry_cost, 0.001), color = "VaR"))
+  xlab("Cost - Thousand USD") +
+  ylab("Frequency") +
+  labs(title = "Possible Cost of a Single Dry Well") +
+  geom_vline(aes(xintercept = median(dry_cost), color = "Median")) +
+  geom_vline(aes(xintercept = quantile(dry_cost, 0.001), color = "0.1% VaR")) +
+  theme_classic() +
+  theme(legend.title=element_blank())
+  
 
 # NPV ----------------------------------------
 # median
