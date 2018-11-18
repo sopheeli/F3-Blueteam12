@@ -115,7 +115,7 @@ visreg(fit_cox, "age", xlab = "age", ylab = "partial residuals",
 
 ### concordance
 concordance(fit_cox)
-corcordance(fit_aft)
+concordance(fit_aft)
 
 
 resids <- data.frame(event = fit_cox$y[,dim(fit_cox$y)[2]],
@@ -142,6 +142,7 @@ ggplot(resids, aes(x = ID, y = res_d, color = factor(event))) +
   labs(x = "ID", y = "deviance residuals", color = "event") +
   scale_color_manual(values = c("purple", "orange"))
 
+
 # change the format of data to use time-dependent variable
 katrina$ID <- factor(katrina$ID)
 colnames(katrina)[9:56] <- 1:48
@@ -149,5 +150,38 @@ katrina_long <- gather(katrina, stop, value, 9:56, factor_key = T)
 katrina_long$stop <- as.numeric(katrina_long$stop)
 katrina_long$start <-  katrina_long$stop - 1
 
-katrina_long$count <- 0
+katrina_long$consecutive <- 0
+katrina_long <- katrina_long %>%
+  arrange(ID, start)
 
+# create variable consecutive
+sum = 0
+for(i in 1:nrow(katrina_long)) {
+  if(katrina_long$start[i] == 0) {
+    if (katrina_long$value[i] == 1) {
+      sum <- 1
+    } else {
+      sum <- 0
+    }
+  } else if (sum >= 12) {
+    katrina_long$consecutive[i] <- 1
+  } else if (katrina_long$value[i] == 0 | is.na(katrina_long$value[i])) {
+    sum <- 0
+  }
+  sum <- sum + 1
+}
+
+
+# model without consecutive
+fit_katrina <- coxph(Surv(start, stop, reason %in% c(2,3)) ~ backup + bridgecrane +
+                       servo + trashrack + elevation + slope + age,
+                     data = katrina_long)
+summary(fit_katrina)
+
+# model with consecutive
+fit_katrina <- coxph(Surv(start, stop, reason %in% c(2,3)) ~ backup + bridgecrane +
+                     servo + trashrack + elevation + slope + age + consecutive,
+                     data = katrina_long)
+summary(fit_katrina)
+
+concordance(fit_katrina)
