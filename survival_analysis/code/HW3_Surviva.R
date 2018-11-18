@@ -8,8 +8,9 @@ library(visreg)
 library(dplyr)
 library(flexsurv)
 library(ggplot2)
+library(tidyr)
 
-katrina <- read.csv("C:/Users/Sophe/Desktop/FALL/Fall3/SurvivalAnalysis/Data/katrina.csv", header = T, stringsAsFactors = F)
+katrina <- read.csv("C:/Users/Jerry/Documents/MSA18/Survival_Analysis/Data/katrina.csv", header = T, stringsAsFactors = F)
 
 katrina$ID <- 1:nrow(katrina)
 
@@ -22,12 +23,12 @@ plot(fit_wbaft, type = "cumhaz", ci = TRUE, conf.int = FALSE, las = 1, bty = "n"
      xlab = "Hour", ylab = "cumulative hazard", main = "weibull distribution")
 
 # exponential distribution
-fit_expaft <- flexsurvreg(Surv(time = hour, event = reason %in% c(2,3)) ~ backup + bridgecrane + servo + 
-                         trashrack + elevation + slope + age, data = katrina, dist = "exponential")
-
-plot(fit_expaft, type = "cumhaz", ci = TRUE, conf.int = FALSE, las = 1, bty = "n", 
-     xlab = "Hour", ylab = "cumulative hazard",
-     main = "exponential distribution")
+  fit_expaft <- flexsurvreg(Surv(time = hour, event = reason %in% c(2,3)) ~ backup + bridgecrane + servo + 
+                           trashrack + elevation + slope + age, data = katrina, dist = "exponential")
+  
+  plot(fit_expaft, type = "cumhaz", ci = TRUE, conf.int = FALSE, las = 1, bty = "n", 
+       xlab = "Hour", ylab = "cumulative hazard",
+       main = "exponential distribution")
 
 # lognormal
 fit_lnormaft <- flexsurvreg(Surv(time = hour, event = reason  %in% c(2,3)) ~ backup + bridgecrane + servo + 
@@ -140,3 +141,13 @@ ggplot(resids, aes(x = ID, y = res_d, color = factor(event))) +
   geom_point() +
   labs(x = "ID", y = "deviance residuals", color = "event") +
   scale_color_manual(values = c("purple", "orange"))
+
+# change the format of data to use time-dependent variable
+katrina$ID <- factor(katrina$ID)
+colnames(katrina)[9:56] <- 1:48
+katrina_long <- gather(katrina, stop, value, 9:56, factor_key = T)
+katrina_long$stop <- as.numeric(katrina_long$stop)
+katrina_long$start <-  katrina_long$stop - 1
+
+katrina_long$count <- 0
+
