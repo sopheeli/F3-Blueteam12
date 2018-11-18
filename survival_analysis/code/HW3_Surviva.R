@@ -142,6 +142,26 @@ ggplot(resids, aes(x = ID, y = res_d, color = factor(event))) +
   labs(x = "ID", y = "deviance residuals", color = "event") +
   scale_color_manual(values = c("purple", "orange"))
 
+# Check if there are time-dependent coefficients
+fit_cox_zph <- cox.zph(fit_cox)
+fit_cox_zph
+plot(fit_cox_zph, var = "age")
+plot(fit_cox_zph, var = "slope")
+plot(fit_cox_zph, var = "elevation")
+plot(fit_cox_zph, var = "backup")
+plot(fit_cox_zph, var = "bridgecrane")
+plot(fit_cox_zph, var = "servo")
+plot(fit_cox_zph, var = "trashrack")
+
+# baseline concordance = .666
+
+fit_tdc <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
+                   servo + trashrack + elevation + slope + age +
+                   tt(servo) + tt(backup),
+                   data = katrina,
+                   tt = function(x, time, ...) {x * log(time)})
+summary(fit_tdc)
+
 
 # change the format of data to use time-dependent variable
 katrina$ID <- factor(katrina$ID)
@@ -183,5 +203,17 @@ fit_katrina <- coxph(Surv(start, stop, reason %in% c(2,3)) ~ backup + bridgecran
                      servo + trashrack + elevation + slope + age + consecutive,
                      data = katrina_long)
 summary(fit_katrina)
+# including time-dependent coefficients is not better
+fit_tdc <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
+                   servo + trashrack + elevation + slope + age + consecutive +
+                   tt(servo) + tt(backup),
+                 data = katrina_long,
+                 tt = function(x, time, ...) {x * log(time)})
+summary(fit_tdc)
+
+# plot the survival curve?????????????????
+ggsurvplot(survfit(fit_katrina, newdata = katrina_long, id = ID), data=katrina_long, legend = "none", break.y.by = 0.1,
+           xlab = "hour", ylab = "survival probability")
+
 
 concordance(fit_katrina)
