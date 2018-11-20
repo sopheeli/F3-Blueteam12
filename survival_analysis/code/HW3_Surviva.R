@@ -157,7 +157,7 @@ plot(fit_cox_zph, var = "trashrack")
 
 fit_tdc <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
                    servo + trashrack + elevation + slope + age +
-                   tt(servo) + tt(backup),
+                   tt(servo) ,
                    data = katrina,
                    tt = function(x, time, ...) {x * log(time)})
 summary(fit_tdc)
@@ -214,6 +214,8 @@ summary(fit_tdc)
 # plot the survival curve?????????????????
 ggsurvplot(survfit(fit_katrina, newdata = katrina_long, id = ID), data=katrina_long, legend = "none", break.y.by = 0.1,
            xlab = "hour", ylab = "survival probability")
+
+
 
 
 concordance(fit_katrina)
