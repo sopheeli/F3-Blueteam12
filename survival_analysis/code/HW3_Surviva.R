@@ -64,41 +64,81 @@ ggsurvplot(survfit(fit_cox), data = katrina, legend = "none", break.y.by = 0.1,
 
 fit_cox$means
 
+# Check if there are time-dependent coefficients
+fit_cox_zph <- cox.zph(fit_cox)
+fit_cox_zph
+plot(fit_cox_zph, var = "age")
+plot(fit_cox_zph, var = "slope")
+plot(fit_cox_zph, var = "elevation")
+plot(fit_cox_zph, var = "backup")
+plot(fit_cox_zph, var = "bridgecrane")
+plot(fit_cox_zph, var = "servo")
+plot(fit_cox_zph, var = "trashrack")
 
-######check constant effect########################
-#backup
-fit_strat_backup <- coxph(Surv(hour, reason %in% c(2,3)) ~ strata(backup) + bridgecrane + 
-                     servo + trashrack + elevation + slope + age, data = katrina)
-
-ggsurvplot(survfit(fit_strat_backup), data = katrina, fun = "cloglog",
-           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
-           legend.title = "backup", xlab = "log(hour)")
-
-#bridgecrane
-fit_strat_bridgecrane <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + strata(bridgecrane) + 
-                     servo + trashrack + elevation + slope + age, data = katrina)
-
-ggsurvplot(survfit(fit_strat_bridgecrane), data = katrina, fun = "cloglog",
-           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
-           legend.title = "bridgecrane", xlab = "log(hour)")
-
-#servo
-fit_strat_servo <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
-                                 strata(servo) + trashrack + elevation + slope + age, data = katrina)
-
-ggsurvplot(survfit(fit_strat_servo), data = katrina, fun = "cloglog",
-           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
-           legend.title = "servo", xlab = "log(hour)")
-
-#trashrack
-fit_strat_trashrack <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
-                                 servo + strata(trashrack) + elevation + slope + age, data = katrina)
-
-ggsurvplot(survfit(fit_strat_trashrack), data = katrina, fun = "cloglog",
-           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
-           legend.title = "trashrack", xlab = "log(hour)")
+# baseline concordance = .666
+fit_tdc <- coxph(Surv(hour, reason %in% c(2,3)) ~ bridgecrane + 
+                   servo + trashrack + elevation + slope + age +
+                   tt(servo) ,
+                   data = katrina,
+                   tt = function(x, time, ...) {x * log(time)})
+summary(fit_tdc)
 
 
+# change the format of data to use time-dependent variable
+katrina$ID <- factor(katrina$ID)
+colnames(katrina)[9:56] <- 1:48
+katrina_long <- gather(katrina, stop, value, 9:56, factor_key = T)
+katrina_long$stop <- as.numeric(katrina_long$stop)
+katrina_long$start <-  katrina_long$stop - 1
+
+katrina_long$consecutive <- 0
+katrina_long <- katrina_long %>%
+  arrange(ID, start)
+
+# create variable consecutive
+sum = 0
+for(i in 1:nrow(katrina_long)) {
+  if(katrina_long$start[i] == 0) {
+    if (katrina_long$value[i] == 1) {
+      sum <- 1
+    } else {
+      sum <- 0
+    }
+  } else if (sum >= 12) {
+    katrina_long$consecutive[i] <- 1
+  } else if (katrina_long$value[i] == 0 | is.na(katrina_long$value[i])) {
+    sum <- 0
+  }
+  sum <- sum + 1
+}
+
+
+
+# model with consecutive
+fit_katrina <- coxph(Surv(start, stop, reason %in% c(2,3)) ~ backup + bridgecrane +
+                     servo + trashrack + elevation + slope + age + consecutive,
+                     data = katrina_long)
+summary(fit_katrina)
+# including time-dependent coefficients is not better
+# fit_tdc <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
+#                    servo + trashrack + elevation + slope + age + consecutive +
+#                    tt(servo) + tt(backup),
+#                  data = katrina_long,
+#                  tt = function(x, time, ...) {x * log(time)})
+# summary(fit_tdc)
+
+# plot the survival curve?????????????????
+ggsurvplot(survfit(fit_katrina, newdata = katrina_long, id = ID), data=katrina_long, legend = "none", break.y.by = 0.1,
+           xlab = "hour", ylab = "survival probability")
+
+
+
+
+concordance(fit_katrina)
+
+
+
+#---------------------------draft-------------------------------------#
 #######checking linearity, Matt said we don't need to#############################
 # elevation
 visreg(fit_cox, "elevation", xlab = "elevation", ylab = "partial residuals", gg = TRUE,
@@ -142,80 +182,35 @@ ggplot(resids, aes(x = ID, y = res_d, color = factor(event))) +
   labs(x = "ID", y = "deviance residuals", color = "event") +
   scale_color_manual(values = c("purple", "orange"))
 
-# Check if there are time-dependent coefficients
-fit_cox_zph <- cox.zph(fit_cox)
-fit_cox_zph
-plot(fit_cox_zph, var = "age")
-plot(fit_cox_zph, var = "slope")
-plot(fit_cox_zph, var = "elevation")
-plot(fit_cox_zph, var = "backup")
-plot(fit_cox_zph, var = "bridgecrane")
-plot(fit_cox_zph, var = "servo")
-plot(fit_cox_zph, var = "trashrack")
+######check constant effect########################
+#backup
+fit_strat_backup <- coxph(Surv(hour, reason %in% c(2,3)) ~ strata(backup) + bridgecrane + 
+                            servo + trashrack + elevation + slope + age, data = katrina)
 
-# baseline concordance = .666
+ggsurvplot(survfit(fit_strat_backup), data = katrina, fun = "cloglog",
+           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
+           legend.title = "backup", xlab = "log(hour)")
 
-fit_tdc <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
-                   servo + trashrack + elevation + slope + age +
-                   tt(servo) ,
-                   data = katrina,
-                   tt = function(x, time, ...) {x * log(time)})
-summary(fit_tdc)
+#bridgecrane
+fit_strat_bridgecrane <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + strata(bridgecrane) + 
+                                 servo + trashrack + elevation + slope + age, data = katrina)
 
+ggsurvplot(survfit(fit_strat_bridgecrane), data = katrina, fun = "cloglog",
+           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
+           legend.title = "bridgecrane", xlab = "log(hour)")
 
-# change the format of data to use time-dependent variable
-katrina$ID <- factor(katrina$ID)
-colnames(katrina)[9:56] <- 1:48
-katrina_long <- gather(katrina, stop, value, 9:56, factor_key = T)
-katrina_long$stop <- as.numeric(katrina_long$stop)
-katrina_long$start <-  katrina_long$stop - 1
+#servo
+fit_strat_servo <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
+                           strata(servo) + trashrack + elevation + slope + age, data = katrina)
 
-katrina_long$consecutive <- 0
-katrina_long <- katrina_long %>%
-  arrange(ID, start)
+ggsurvplot(survfit(fit_strat_servo), data = katrina, fun = "cloglog",
+           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
+           legend.title = "servo", xlab = "log(hour)")
 
-# create variable consecutive
-sum = 0
-for(i in 1:nrow(katrina_long)) {
-  if(katrina_long$start[i] == 0) {
-    if (katrina_long$value[i] == 1) {
-      sum <- 1
-    } else {
-      sum <- 0
-    }
-  } else if (sum >= 12) {
-    katrina_long$consecutive[i] <- 1
-  } else if (katrina_long$value[i] == 0 | is.na(katrina_long$value[i])) {
-    sum <- 0
-  }
-  sum <- sum + 1
-}
+#trashrack
+fit_strat_trashrack <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
+                               servo + strata(trashrack) + elevation + slope + age, data = katrina)
 
-
-# model without consecutive
-fit_katrina <- coxph(Surv(start, stop, reason %in% c(2,3)) ~ backup + bridgecrane +
-                       servo + trashrack + elevation + slope + age,
-                     data = katrina_long)
-summary(fit_katrina)
-
-# model with consecutive
-fit_katrina <- coxph(Surv(start, stop, reason %in% c(2,3)) ~ backup + bridgecrane +
-                     servo + trashrack + elevation + slope + age + consecutive,
-                     data = katrina_long)
-summary(fit_katrina)
-# including time-dependent coefficients is not better
-fit_tdc <- coxph(Surv(hour, reason %in% c(2,3)) ~ backup + bridgecrane + 
-                   servo + trashrack + elevation + slope + age + consecutive +
-                   tt(servo) + tt(backup),
-                 data = katrina_long,
-                 tt = function(x, time, ...) {x * log(time)})
-summary(fit_tdc)
-
-# plot the survival curve?????????????????
-ggsurvplot(survfit(fit_katrina, newdata = katrina_long, id = ID), data=katrina_long, legend = "none", break.y.by = 0.1,
-           xlab = "hour", ylab = "survival probability")
-
-
-
-
-concordance(fit_katrina)
+ggsurvplot(survfit(fit_strat_trashrack), data = katrina, fun = "cloglog",
+           palette = c("black", "purple"), legend.labs = c("no-upgrade", "upgrade"),
+           legend.title = "trashrack", xlab = "log(hour)")
