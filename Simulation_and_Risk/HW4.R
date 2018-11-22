@@ -106,6 +106,7 @@ for (i in 1:n_sims) {
   # It remains constant throughout a well's lifetime
   # Triangular distribution
   overhead_costs_wet <- rtriangle(n=n_wet, a = 172000, b = 279500, c=215000)
+  
   if (n_dry != 0){
     overhead_costs_dry <- rtriangle(n=n_dry, a = 172000, b = 279500, c=215000)
   } else {
@@ -237,4 +238,8 @@ ggplot(well) +
   geom_vline(aes(xintercept = ES, color = "Expected Shortfall")) +
   theme_classic() +
   theme(legend.title=element_blank())
+min(final_NPV)
+max(dry_cost)
+min(NPV)
+
 
