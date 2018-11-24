@@ -53,6 +53,11 @@ drill1$Average.Cost = ((drill1$`U.S. Nominal Cost per Crude Oil Well Drilled (Th
 x = as.data.frame(c(drill1$Return.Crude.Oil, drill1$Return.Natural.Gas, drill1$Return.Dry.Well))
 
 # whether well is wet ----------------------------------------------------
+drilling_all <- c()
+lease_all <- c()
+seismic_all <- c()
+completion_all <- c()
+overhead_all <- c()
 final_NPV <- c()
 for (i in 1:n_sims) {
   n_wells = round(runif(1, min = 10, max = 30))
@@ -88,21 +93,21 @@ for (i in 1:n_sims) {
     drilling_cost[i] <- P # outputs cost prediciton for 2019 to vector "cost_k"
   }
   drilling_cost <- drilling_cost * 1000
-  
+  drilling_all <- c(drilling_all, drilling_cost)
   # Year "0" Costs ----------------------------------------------------------
   #  leased acres per well - Normally Distributed
   #  Each acre costs us $960 (this will be a recurring annual cost if we find a "WET" well)
   lease_costs <- rnorm(n = n_wells, mean = 600, sd = 50) * 960
-  
+  lease_all <- c(lease_all, lease_costs)
   # Number of seismic sections per well, Normally Distributed
   # Each section (per well) costs us $43,000
   seismic_costs <- rnorm(n = n_wells, mean = 3, sd = 0.35) * 43000
-  
+  seismic_all <- c(seismic_all, seismic_costs)
   # These costs will only be incurred IF the well is "WET"
   # So, "DRY" wells will not incur this cost
   # Normally distributed
   completion_costs <- rnorm(n = n_wet, mean = 390000, sd=50000)
-
+  completion_all <- c(completion_all, completion_costs)
   
   # These costs always occur year 0, and recur only if the well is "WET"
   # So, "DRY" wells only have this cost for year 0
@@ -115,7 +120,8 @@ for (i in 1:n_sims) {
   } else {
     overhead_costs_dry <- 0
   }
-  
+
+  overhead_all <- c(overhead_all, overhead_costs_wet, overhead_costs_dry)
   # Production Risk ---------------------------------------------------------
   # We must simulate the oil production rate, described with
   # 1. Initial production  (lognormally distributed)
@@ -234,7 +240,7 @@ ES = mean(final_NPV[final_NPV <= VaR])
 well <- data.frame(final_NPV = final_NPV)
 ggplot(well) +
   geom_histogram(aes(x = final_NPV), bins = 10) +
-  xlab("NPV - Thousand USD") +
+  xlab("NPV - Billion USD") +
   ylab("Frequency") +
   labs(title = "Possible Net Present Value of a Single Wet Well") +
   geom_vline(aes(xintercept = median(final_NPV), color = "Median")) +
@@ -242,6 +248,50 @@ ggplot(well) +
   geom_vline(aes(xintercept = ES, color = "Expected Shortfall")) +
   theme_classic() +
   theme(legend.title=element_blank())
+
+drilling <- data.frame(drilling = drilling_all/1000000)
+lease <- data.frame(lease = lease_all/1000000)
+seismic <- data.frame(seismic = seismic_all/1000000)
+completion <- data.frame(completion = completion_all/1000000)
+overhead <- data.frame(overhead = overhead_all/1000000)
+
+ggplot(drilling) +
+  geom_histogram(aes(x = drilling), bins = 10) +
+  xlab("Drilling Cost - Million USD") +
+  ylab("Frequency") +
+  labs(title = "Possible Drilling Cost of a Single Well")
+
+ggplot(lease) +
+  geom_histogram(aes(x = lease), bins = 10) +
+  xlab("Drilling Cost - Million USD") +
+  ylab("Frequency") +
+  labs(title = "Possible Drilling Cost of a Single Well")
+
+ggplot(seismic) +
+  geom_histogram(aes(x = seismic), bins = 10) +
+  xlab("Drilling Cost - Million USD") +
+  ylab("Frequency") +
+  labs(title = "Possible Seismic Cost of a Single Well")
+
+ggplot(completion) +
+  geom_histogram(aes(x = completion), bins = 10) +
+  xlab("completion Cost - Million USD") +
+  ylab("Frequency") +
+  labs(title = "Possible Completion Cost of a Single Well")
+
+ggplot(drilling) +
+  geom_histogram(aes(x = drilling), bins = 10) +
+  xlab("Drilling Cost - Million USD") +
+  ylab("Frequency") +
+  labs(title = "Possible Drilling Cost of a Single Well")
+
+ggplot(overhead) +
+  geom_histogram(aes(x = overhead), bins = 10) +
+  xlab("Drilling Cost - Million USD") +
+  ylab("Frequency") +
+  labs(title = "Possible Overhead Cost of a Single Well")
+
+
 min(final_NPV)
 max(dry_cost)
 min(NPV)
