@@ -240,7 +240,7 @@ ES = mean(final_NPV[final_NPV <= VaR])
 well <- data.frame(final_NPV = final_NPV)
 ggplot(well) +
   geom_histogram(aes(x = final_NPV), bins = 10) +
-  xlab("NPV - Billion USD") +
+  xlab("NPV - Million USD") +
   ylab("Frequency") +
   labs(title = "Possible Net Present Value of a Single Wet Well") +
   geom_vline(aes(xintercept = median(final_NPV), color = "Median")) +
