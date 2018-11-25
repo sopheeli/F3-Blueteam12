@@ -5,7 +5,6 @@ library(quantmod)
 library(TTR)
 library(ks)
 library(scales)
-#install.packages("truncnorm")
 library(truncnorm)
 library(stats)
 library(ggplot2)
@@ -31,7 +30,7 @@ ggplot(dfReservoir, aes(x=Reservoir)) +
   theme_minimal() + theme(title = element_text(size = 18), axis.title.x = element_text(size =14), axis.title.y = element_text(size =14))
 
 
-n = 1000000
+n = 100000
 nn = 1000
 
 proportion_productive = rep(0,n)
