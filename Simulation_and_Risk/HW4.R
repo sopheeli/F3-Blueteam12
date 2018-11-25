@@ -12,16 +12,16 @@ library(dplyr)
 library(EnvStats)
 library(readr)
 
-setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
-
+#setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
+setwd("C:/Users/Sophe/Desktop/FALL/Fall3/SimulationandRiskAnalysis/Project")
 # number of single well simulations
-n_sims <- 1000
+n_sims <- 100000
 # the number of years
 n_years <- 15
 set.seed(8888)
 
 # oil price 
-oil_pred <- read_excel("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/Analysis_Data.xlsx")
+oil_pred <- read_excel("C:/Users/Sophe/Desktop/FALL/Fall3/SimulationandRiskAnalysis/Project/Analysis_Data.xlsx")
 oil_pred <- oil_pred[c(3:nrow(oil_pred)),]
 oil_pred <- data.frame(oil_pred)
 colnames(oil_pred) <- c("year", "high_price", "low_price", "aeo_ref")
@@ -52,12 +52,15 @@ drill1$Average.Cost = ((drill1$`U.S. Nominal Cost per Crude Oil Well Drilled (Th
                           drill1$`U.S. Nominal Cost per Dry Well Drilled (Thousand Dollars per Well)`)/3)
 x = as.data.frame(c(drill1$Return.Crude.Oil, drill1$Return.Natural.Gas, drill1$Return.Dry.Well))
 
+##################################################################################
 # whether well is wet ----------------------------------------------------
 drilling_all <- c()
 lease_all <- c()
 seismic_all <- c()
 completion_all <- c()
 overhead_all <- c()
+NPV_all <- c()
+dry_cost_all <- c()
 final_NPV <- c()
 for (i in 1:n_sims) {
   n_wells = round(runif(1, min = 10, max = 30))
@@ -120,7 +123,7 @@ for (i in 1:n_sims) {
   } else {
     overhead_costs_dry <- 0
   }
-
+  
   overhead_all <- c(overhead_all, overhead_costs_wet, overhead_costs_dry)
   # Production Risk ---------------------------------------------------------
   # We must simulate the oil production rate, described with
@@ -221,79 +224,116 @@ for (i in 1:n_sims) {
   NPV <- -(completion_costs + seismic_costs[1:n_wet] + drilling_cost[1:n_wet] +
              overhead_costs_wet + lease_costs[1:n_wet]) + sum
   
+  NPV_all <- c(NPV_all,NPV)
+  
   if (n_dry == 0) {
     dry_cost = 0
   } else {
     dry_cost <- overhead_costs_dry + lease_costs[(n_wet + 1):n_wells] + seismic_costs[(n_wet + 1):n_wells] + drilling_cost[(n_wet + 1):n_wells]
+    dry_cost_all <- c(dry_cost_all,dry_cost)  
   }
   
   final_NPV <- c(final_NPV, (sum(NPV) - sum(dry_cost)))
 }
 final_NPV
 
+##############################################################################
 
 final_NPV <- final_NPV / 1000000
+summary(final_NPV)
+
 VaR_percentile = 0.01
 VaR <- quantile(final_NPV, VaR_percentile)
+VaR_percentile_1 = 0.0001
+VaR_zero <- quantile(final_NPV, VaR_percentile_1)
+
 ES = mean(final_NPV[final_NPV <= VaR])
 
+# Confidence Intervals for Value at Risk & Expected Shortfall - Bootstrap Approach #
+n.bootstraps <- 1000
+sample.size <- 1000
+
+VaR.boot <- rep(0,n.bootstraps)
+ES.boot <- rep(0,n.bootstraps)
+for(i in 1:n.bootstraps){
+  bootstrap.sample <- sample(final_NPV, size=sample.size)
+  VaR.boot[i] <- quantile(bootstrap.sample,VaR_percentile, na.rm=TRUE)
+  ES.boot[i] <- mean(bootstrap.sample[bootstrap.sample < VaR.boot[i]], na.rm=TRUE)
+}
+
+VaR.boot.U <- quantile(VaR.boot, 0.975, na.rm=TRUE)
+VaR.boot.L <- quantile(VaR.boot, 0.025, na.rm=TRUE)
+dollar(VaR.boot.L)
+dollar(VaR)
+dollar(VaR.boot.U)
+
+hist(VaR.boot, breaks = 50, main='Possible Value at Risk', xlab='VaR - Million USD')
+abline(v = VaR.boot.L, col="blue", lwd=2, lty="dashed")
+abline(v = VaR.boot.U, col="blue", lwd=2, lty="dashed")
+
+
+ES.boot.U <- quantile(ES.boot, 0.975, na.rm=TRUE)
+ES.boot.L <- quantile(ES.boot, 0.025, na.rm=TRUE)
+dollar(ES.boot.L)
+dollar(ES)
+dollar(ES.boot.U)
+
+hist(ES.boot, breaks = 50, main='Possible Expected Shortfall', xlab='ES - Million USD')
+abline(v = ES.boot.U, col="blue", lwd=2, lty="dashed")
+abline(v = ES.boot.L, col="blue", lwd=2, lty="dashed")
+
+#graphs ----------------------------------------------------------
 well <- data.frame(final_NPV = final_NPV)
 ggplot(well) +
-  geom_histogram(aes(x = final_NPV), bins = 10) +
+  geom_histogram(aes(x = final_NPV), bins = 50) +
   xlab("NPV - Million USD") +
   ylab("Frequency") +
-  labs(title = "Possible Net Present Value of a Single Wet Well") +
+  labs(title = "Possible Final Net Present Value") +
   geom_vline(aes(xintercept = median(final_NPV), color = "Median")) +
-  geom_vline(aes(xintercept = VaR, color = "0.1% VaR")) +
-  geom_vline(aes(xintercept = ES, color = "Expected Shortfall")) +
+  geom_vline(aes(xintercept = VaR, color = "1% VaR")) +
+  geom_vline(aes(xintercept = VaR.boot.U, color = "Upper Bound VaR")) +
+  geom_vline(aes(xintercept = VaR.boot.L, color = "Lower Bound VaR"))+
   theme_classic() +
   theme(legend.title=element_blank())
 
+#drilling cost
 drilling <- data.frame(drilling = drilling_all/1000000)
-lease <- data.frame(lease = lease_all/1000000)
-seismic <- data.frame(seismic = seismic_all/1000000)
-completion <- data.frame(completion = completion_all/1000000)
-overhead <- data.frame(overhead = overhead_all/1000000)
+VaR_drilling <- quantile(drilling_all/1000000, 0.99)
 
 ggplot(drilling) +
-  geom_histogram(aes(x = drilling), bins = 10) +
+  geom_histogram(aes(x = drilling), bins = 100) +
   xlab("Drilling Cost - Million USD") +
   ylab("Frequency") +
-  labs(title = "Possible Drilling Cost of a Single Well")
+  labs(title = "Possible Drilling Cost of a Single Well")+
+  geom_vline(aes(xintercept = VaR_drilling, color = "99% VaR"))+
+  theme_classic() +
+  theme(legend.title=element_blank())
+summary(drilling)
 
-ggplot(lease) +
-  geom_histogram(aes(x = lease), bins = 10) +
-  xlab("Drilling Cost - Million USD") +
+#NPV
+npv_1 <- data.frame(npv = NPV_all/1000000)
+var_npv <- quantile(NPV_all/1000000, 0.01)
+ggplot(npv_1) +
+  geom_histogram(aes(x = npv), bins = 100) +
+  xlab("Net Present Value - Million USD") +
   ylab("Frequency") +
-  labs(title = "Possible Drilling Cost of a Single Well")
+  labs(title = "Possible Net Present Value of a Single Wet Well")+
+  geom_vline(aes(xintercept = var_npv, color = "1% VaR"))+
+  geom_vline(aes(xintercept = median(npv), color = "Median"))+
+  theme_classic() +
+  theme(legend.title=element_blank())
+summary(npv_1)
 
-ggplot(seismic) +
-  geom_histogram(aes(x = seismic), bins = 10) +
-  xlab("Drilling Cost - Million USD") +
+#dry cost
+dry_cost_1 <- data.frame(dry_cost = dry_cost_all/1000000)
+var_drycost <- quantile(dry_cost/1000000, 0.99)
+ggplot(dry_cost_1) +
+  geom_histogram(aes(x = dry_cost), bins = 100) +
+  xlab("Cost - Thousand USD") +
   ylab("Frequency") +
-  labs(title = "Possible Seismic Cost of a Single Well")
-
-ggplot(completion) +
-  geom_histogram(aes(x = completion), bins = 10) +
-  xlab("completion Cost - Million USD") +
-  ylab("Frequency") +
-  labs(title = "Possible Completion Cost of a Single Well")
-
-ggplot(drilling) +
-  geom_histogram(aes(x = drilling), bins = 10) +
-  xlab("Drilling Cost - Million USD") +
-  ylab("Frequency") +
-  labs(title = "Possible Drilling Cost of a Single Well")
-
-ggplot(overhead) +
-  geom_histogram(aes(x = overhead), bins = 10) +
-  xlab("Drilling Cost - Million USD") +
-  ylab("Frequency") +
-  labs(title = "Possible Overhead Cost of a Single Well")
-
-
-min(final_NPV)
-max(dry_cost)
-min(NPV)
-
-
+  labs(title = "Possible Cost of a Single Dry Well") +
+  geom_vline(aes(xintercept = median(dry_cost), color = "Median")) +
+  geom_vline(aes(xintercept = var_drycost, color = "99% VaR"))+
+  theme_classic() +
+  theme(legend.title=element_blank())
+summary(dry_cost_1)
