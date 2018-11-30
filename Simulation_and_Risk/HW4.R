@@ -12,8 +12,8 @@ library(dplyr)
 library(EnvStats)
 library(readr)
 
-#setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
-setwd("C:/Users/Sophe/Desktop/FALL/Fall3/SimulationandRiskAnalysis/Project")
+setwd("C:/Users/Jerry/Documents/MSA18/Simulation_Risk_Analysis/HW/")
+#setwd("C:/Users/Sophe/Desktop/FALL/Fall3/SimulationandRiskAnalysis/Project")
 # number of single well simulations
 n_sims <- 100000
 # the number of years
@@ -21,7 +21,7 @@ n_years <- 15
 set.seed(8888)
 
 # oil price 
-oil_pred <- read_excel("C:/Users/Sophe/Desktop/FALL/Fall3/SimulationandRiskAnalysis/Project/Analysis_Data.xlsx")
+oil_pred <- read_excel("Analysis_Data.xlsx")
 oil_pred <- oil_pred[c(3:nrow(oil_pred)),]
 oil_pred <- data.frame(oil_pred)
 colnames(oil_pred) <- c("year", "high_price", "low_price", "aeo_ref")
@@ -278,6 +278,16 @@ dollar(ES.boot.L)
 dollar(ES)
 dollar(ES.boot.U)
 
+df_ES.boot <- data.frame(ES.boot = ES.boot)
+
+ggplot(df_ES.boot) +
+  geom_histogram(aes(x = ES.boot), bins = 50) + 
+  geom_vline(aes(xintercept = ES.boot.U, color = "Upper Bound"), linetype="dotted") +
+  geom_vline(aes(xintercept = ES.boot.L, color = "Lower Bound"), linetype="dotted") +
+  xlab("ES - Million USD") +
+  ylab("Frequency") +
+  labs(title = "Possible Expected Shortfall")
+
 hist(ES.boot, breaks = 50, main='Possible Expected Shortfall', xlab='ES - Million USD')
 abline(v = ES.boot.U, col="blue", lwd=2, lty="dashed")
 abline(v = ES.boot.L, col="blue", lwd=2, lty="dashed")
@@ -332,8 +342,12 @@ ggplot(dry_cost_1) +
   xlab("Cost - Thousand USD") +
   ylab("Frequency") +
   labs(title = "Possible Cost of a Single Dry Well") +
-  geom_vline(aes(xintercept = median(dry_cost), color = "Median")) +
+  geom_vline(aes(xintercept = median(dry_cost), color = "Median"), linetype="dotted") +
+  geom_text(aes(x=median(dry_cost), label=as.character(round(median(dry_cost), 1)), y=20)) +
   geom_vline(aes(xintercept = var_drycost, color = "99% VaR"))+
   theme_classic() +
   theme(legend.title=element_blank())
 summary(dry_cost_1)
+
+
+length(final_NPV[final_NPV < 0]) / length(final_NPV)
